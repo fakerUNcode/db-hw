@@ -6,19 +6,10 @@
   <meta name="description" content="数据库缓冲池页面置换机制可视化：LRU 与 LFU 双引擎交互动画仿真、同屏竞技对比与工业级评估矩阵。">
   <title>缓冲区页面置换机制：LRU 与 LFU 深度解析与交互仿真平台</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232563eb'/%3E%3Crect x='13' y='19' width='38' height='10' rx='5' fill='white' opacity='0.95'/%3E%3Crect x='13' y='35' width='24' height='10' rx='5' fill='white' opacity='0.6'/%3E%3C/svg%3E">
-  <!-- 引入霞鹜文楷 (LXGW WenKai) 与屏幕清晰优化版 Webfont CDN，配合本地字体优先声明 -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.1.0/style.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont@1.1.0/style.css">
+  <!-- 本地字体优先声明（零外部网络依赖，离线秒开） -->
   <style>
     /* ==========================================================================
-       设计系统：iOS 27 液态玻璃设计语言 (iOS 27 Liquid Glassmorphism & Refractive Optics)
-       核心规范：
-       1. 字体：霞鹜文楷 (LXGW WenKai) 作为主视觉字体，兼备极速本地回退与现代系统字族；
-       2. 材质：高透光液态玻璃面板，36px 超细高斯模糊，210% 色彩饱和度提升与内阴影折射；
-       3. 动效：液态流曳光束 (Liquid Sheen Stream)、全元素微动物理弹性缩放 (Fluid Hover Scaling)；
-       4. 严禁 Emoji：所有指示符号均采用精细矢量与纯字符符号；
-       5. 架构：完整保留三级导航与全部推演算法；
-       6. 动效增强：以 N1-N15 编号新增 15 种动态效果，并修复动效溢出隔断缺陷。
+       设计系统：Precision Kernel Studio（高对比度学术工程风）
        ========================================================================== */
 
     @font-face {
@@ -28,16 +19,15 @@
     }
 
     :root {
-      /* 浅色液态晶石色盘 (Iridescent Quartz Light - iOS 27 Liquid Glass) */
-      --bg-page: #edf2f8;
-      --glass-surface: rgba(255, 255, 255, 0.65);
-      --glass-surface-elevated: rgba(255, 255, 255, 0.84);
-      --glass-surface-subtle: rgba(255, 255, 255, 0.45);
-      
-      --glass-border: rgba(255, 255, 255, 0.88);
-      --glass-border-subtle: rgba(255, 255, 255, 0.60);
-      --glass-specular: rgba(255, 255, 255, 0.98);
-      --glass-inner-shadow: inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.9), inset 0 -1.5px 2px 0 rgba(0, 0, 0, 0.03), inset 0 0 24px rgba(255, 255, 255, 0.15);
+      --bg-page: #f3f6fb;
+      --glass-surface: rgba(255, 255, 255, 0.88);
+      --glass-surface-elevated: #ffffff;
+      --glass-surface-subtle: #f8fafc;
+
+      --glass-border: rgba(15, 23, 42, 0.09);
+      --glass-border-subtle: rgba(15, 23, 42, 0.06);
+      --glass-specular: rgba(37, 99, 235, 0.22);
+      --glass-inner-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 
       --text-main: #0f172a;
       --text-sub: #334155;
@@ -45,71 +35,70 @@
       --text-white: #ffffff;
 
       --blue-main: #2563eb;
-      --blue-glass: rgba(37, 99, 235, 0.12);
-      --blue-glow: rgba(37, 99, 235, 0.32);
-      --blue-border: rgba(37, 99, 235, 0.38);
+      --blue-glass: rgba(37, 99, 235, 0.09);
+      --blue-glow: rgba(37, 99, 235, 0.22);
+      --blue-border: rgba(37, 99, 235, 0.30);
 
       --emerald-main: #059669;
-      --emerald-glass: rgba(5, 150, 105, 0.12);
-      --emerald-glow: rgba(5, 150, 105, 0.32);
-      --emerald-border: rgba(5, 150, 105, 0.38);
+      --emerald-glass: rgba(5, 150, 105, 0.09);
+      --emerald-glow: rgba(5, 150, 105, 0.22);
+      --emerald-border: rgba(5, 150, 105, 0.30);
 
       --rose-main: #e11d48;
-      --rose-glass: rgba(225, 29, 72, 0.12);
+      --rose-glass: rgba(225, 29, 72, 0.09);
       --amber-main: #d97706;
-      --amber-glass: rgba(217, 119, 6, 0.15);
+      --amber-glass: rgba(217, 119, 6, 0.11);
 
-      --shadow-liquid-soft: 0 10px 30px -10px rgba(15, 23, 42, 0.08), 0 20px 45px -15px rgba(37, 99, 235, 0.06);
-      --shadow-liquid-card: 0 14px 34px -8px rgba(15, 23, 42, 0.07), 0 4px 14px -2px rgba(0, 0, 0, 0.03);
-      --shadow-liquid-float: 0 24px 60px -10px rgba(15, 23, 42, 0.14), 0 8px 24px -4px rgba(0, 0, 0, 0.06);
+      --shadow-liquid-soft: 0 4px 16px -4px rgba(15, 23, 42, 0.06);
+      --shadow-liquid-card: 0 6px 24px -6px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
+      --shadow-liquid-float: 0 12px 32px -8px rgba(15, 23, 42, 0.10), 0 2px 6px rgba(15, 23, 42, 0.04);
 
-      --radius-sm: 10px;
-      --radius-md: 16px;
-      --radius-lg: 22px;
-      --radius-xl: 28px;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
       --radius-pill: 9999px;
 
-      --font-main: "LXGW WenKai", "LXGW WenKai Screen", "霞鹜文楷", "LXGW WenKai Fallback", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      --font-main: "LXGW WenKai", "LXGW WenKai Screen", "霞鹜文楷", "LXGW WenKai Fallback", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
       --ease-liquid: cubic-bezier(0.2, 0.8, 0.2, 1);
-      --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
     }
 
     [data-theme="dark"] {
-      /* 深色液态黑曜石色盘 (Liquid Obsidian Dark - iOS 27 Liquid Glass) */
-      --bg-page: #06090f;
-      --glass-surface: rgba(15, 22, 36, 0.66);
-      --glass-surface-elevated: rgba(22, 33, 54, 0.78);
-      --glass-surface-subtle: rgba(11, 17, 28, 0.50);
+      --bg-page: #090d16;
+      --glass-surface: rgba(17, 24, 39, 0.86);
+      --glass-surface-elevated: #161f30;
+      --glass-surface-subtle: #111827;
 
-      --glass-border: rgba(255, 255, 255, 0.16);
-      --glass-border-subtle: rgba(255, 255, 255, 0.09);
-      --glass-specular: rgba(255, 255, 255, 0.28);
-      --glass-inner-shadow: inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.22), inset 0 -1.5px 2px 0 rgba(0, 0, 0, 0.52), inset 0 0 24px rgba(59, 130, 246, 0.08);
+      --glass-border: rgba(255, 255, 255, 0.10);
+      --glass-border-subtle: rgba(255, 255, 255, 0.07);
+      --glass-specular: rgba(59, 130, 246, 0.35);
+      --glass-inner-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 
-      --text-main: #f8fafc;
-      --text-sub: #94a3b8;
-      --text-muted: #64748b;
+      --text-main: #f1f5f9;
+      --text-sub: #cbd5e1;
+      --text-muted: #94a3b8;
       --text-white: #ffffff;
 
       --blue-main: #3b82f6;
-      --blue-glass: rgba(59, 130, 246, 0.18);
-      --blue-glow: rgba(59, 130, 246, 0.40);
-      --blue-border: rgba(59, 130, 246, 0.48);
+      --blue-glass: rgba(59, 130, 246, 0.15);
+      --blue-glow: rgba(59, 130, 246, 0.28);
+      --blue-border: rgba(59, 130, 246, 0.40);
 
       --emerald-main: #10b981;
-      --emerald-glass: rgba(16, 185, 129, 0.18);
-      --emerald-glow: rgba(16, 185, 129, 0.40);
-      --emerald-border: rgba(16, 185, 129, 0.48);
+      --emerald-glass: rgba(16, 185, 129, 0.15);
+      --emerald-glow: rgba(16, 185, 129, 0.28);
+      --emerald-border: rgba(16, 185, 129, 0.40);
 
       --rose-main: #f43f5e;
-      --rose-glass: rgba(244, 63, 94, 0.18);
+      --rose-glass: rgba(244, 63, 94, 0.15);
       --amber-main: #f59e0b;
-      --amber-glass: rgba(245, 158, 11, 0.18);
+      --amber-glass: rgba(245, 158, 11, 0.15);
 
-      --shadow-liquid-soft: 0 12px 35px -10px rgba(0, 0, 0, 0.55), 0 20px 45px -15px rgba(59, 130, 246, 0.15);
-      --shadow-liquid-card: 0 16px 42px -8px rgba(0, 0, 0, 0.65);
-      --shadow-liquid-float: 0 28px 70px -10px rgba(0, 0, 0, 0.82);
+      --shadow-liquid-soft: 0 4px 18px -4px rgba(0, 0, 0, 0.45);
+      --shadow-liquid-card: 0 8px 28px -6px rgba(0, 0, 0, 0.55);
+      --shadow-liquid-float: 0 16px 40px -8px rgba(0, 0, 0, 0.65);
     }
 
     * {
@@ -120,182 +109,94 @@
 
     body {
       background-color: var(--bg-page);
+      background-image:
+        radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.06) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(5, 150, 105, 0.05) 0px, transparent 50%);
       color: var(--text-main);
       font-family: var(--font-main);
       line-height: 1.65;
       min-height: 100vh;
       display: flex;
       flex-direction: row;
-      transition: background-color 0.4s var(--ease-liquid), color 0.4s var(--ease-liquid);
+      transition: background-color 0.3s ease, color 0.3s ease;
       -webkit-font-smoothing: antialiased;
       overflow-x: hidden;
       position: relative;
     }
 
     /* ==========================================================================
-       液态焦散多重折射氛围场 (Liquid Caustics Multi-Orb Field)
-       ========================================================================== */
-    .ambient-orb {
-      position: fixed;
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 0;
-      will-change: transform;
-    }
-
-    .ambient-orb-1 {
-      top: -14%;
-      left: -10%;
-      width: 58vw;
-      height: 58vw;
-      background: radial-gradient(circle, rgba(59, 130, 246, 0.16) 0%, rgba(59, 130, 246, 0) 70%);
-      filter: blur(90px);
-      animation: ambientDrift1 22s infinite alternate ease-in-out;
-    }
-
-    .ambient-orb-2 {
-      bottom: -16%;
-      right: -10%;
-      width: 54vw;
-      height: 54vw;
-      background: radial-gradient(circle, rgba(16, 185, 129, 0.13) 0%, rgba(16, 185, 129, 0) 70%);
-      filter: blur(100px);
-      animation: ambientDrift2 26s infinite alternate-reverse ease-in-out;
-    }
-
-    .ambient-orb-3 {
-      top: 38%;
-      right: 22%;
-      width: 38vw;
-      height: 38vw;
-      background: radial-gradient(circle, rgba(168, 85, 247, 0.08) 0%, rgba(168, 85, 247, 0) 70%);
-      filter: blur(105px);
-      animation: ambientDrift3 30s infinite alternate ease-in-out;
-    }
-
-    [data-theme="dark"] .ambient-orb-1 {
-      background: radial-gradient(circle, rgba(59, 130, 246, 0.22) 0%, rgba(59, 130, 246, 0) 70%);
-    }
-    [data-theme="dark"] .ambient-orb-2 {
-      background: radial-gradient(circle, rgba(16, 185, 129, 0.18) 0%, rgba(16, 185, 129, 0) 70%);
-    }
-    [data-theme="dark"] .ambient-orb-3 {
-      background: radial-gradient(circle, rgba(168, 85, 247, 0.12) 0%, rgba(168, 85, 247, 0) 70%);
-    }
-
-    @keyframes ambientDrift1 {
-      0% { transform: translate3d(0, 0, 0) scale(1); }
-      50% { transform: translate3d(6vw, 4vh, 0) scale(1.08); }
-      100% { transform: translate3d(-3vw, -4vh, 0) scale(0.95); }
-    }
-
-    @keyframes ambientDrift2 {
-      0% { transform: translate3d(0, 0, 0) scale(1); }
-      50% { transform: translate3d(-5vw, -5vh, 0) scale(1.1); }
-      100% { transform: translate3d(4vw, 3vh, 0) scale(0.92); }
-    }
-
-    @keyframes ambientDrift3 {
-      0% { transform: translate3d(0, 0, 0) scale(0.95); }
-      50% { transform: translate3d(-4vw, 5vh, 0) scale(1.06); }
-      100% { transform: translate3d(5vw, -3vh, 0) scale(1); }
-    }
-
-    /* ==========================================================================
-       液态玻璃流曳光束动画 (Liquid Glass Sliding Sheen Stream)
-       ========================================================================== */
-    @keyframes liquidSheenStream {
-      0% {
-        transform: translate3d(-180%, -50%, 0) rotate(28deg);
-        opacity: 0;
-      }
-      15% {
-        opacity: 0.65;
-      }
-      35% {
-        transform: translate3d(240%, -50%, 0) rotate(28deg);
-        opacity: 0;
-      }
-      100% {
-        transform: translate3d(240%, -50%, 0) rotate(28deg);
-        opacity: 0;
-      }
-    }
-
-    /* ==========================================================================
-       左侧悬浮式纯文字树状导航 (Liquid Glass Floating Sidebar Dock)
+       左侧悬浮式纯文字树状导航 (Floating Sidebar Dock)
        ========================================================================== */
     aside.floating-sidebar {
       position: fixed;
-      left: 28px;
-      top: 32px;
-      bottom: 32px;
-      width: 228px;
+      left: 24px;
+      top: 24px;
+      bottom: 24px;
+      width: 224px;
       background: var(--glass-surface);
       border: 1px solid var(--glass-border);
       border-radius: var(--radius-xl);
-      padding: 20px 16px;
+      padding: 20px 14px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       box-shadow: var(--shadow-liquid-float);
-      backdrop-filter: blur(36px) saturate(210%);
-      -webkit-backdrop-filter: blur(36px) saturate(210%);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       z-index: 100;
-      transition: all 0.35s var(--ease-spring);
+      transition: background-color 0.3s ease, border-color 0.3s ease;
     }
 
     .nav-brand-header {
-      padding: 0 8px 16px 8px;
+      padding: 0 8px 14px 8px;
       border-bottom: 1px solid var(--glass-border-subtle);
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
 
     .nav-brand-title {
-      font-size: 16.5px;
+      font-size: 16px;
       font-weight: 800;
       letter-spacing: -0.01em;
       color: var(--text-main);
     }
 
     .nav-brand-sub {
-      font-size: 13px;
+      font-size: 12.5px;
       color: var(--text-muted);
-      margin-top: 3px;
+      margin-top: 2px;
     }
 
     .nav-tree {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 14px;
       flex: 1;
       overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 2px;
     }
 
     .nav-group {
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 4px;
     }
 
     .nav-group-title {
-      font-size: 15.5px;
+      font-size: 14.5px;
       font-weight: 700;
       color: var(--text-main);
-      padding: 9px 12px;
+      padding: 7px 10px;
       border-radius: var(--radius-md);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      transition: all 0.25s var(--ease-spring);
+      transition: background-color 0.2s ease, color 0.2s ease;
     }
 
-    /* [右侧越界修复] 悬停右移与光晕外扩收窄，确保变换+阴影完全落在导航条边界内 */
     .nav-group-title:hover {
-      background: var(--glass-surface-elevated);
-      transform: translateX(2px) scale(1.01);
-      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+      background: var(--glass-surface-subtle);
     }
 
     .nav-group-title.active-group {
@@ -306,36 +207,33 @@
     .nav-sub-list {
       display: flex;
       flex-direction: column;
-      gap: 3px;
-      padding-left: 14px;
+      gap: 4px;
+      padding-left: 12px;
       margin-left: 10px;
       border-left: 2px solid var(--glass-border-subtle);
     }
 
     .nav-sub-item {
-      font-size: 14.5px;
+      font-size: 14px;
       color: var(--text-sub);
-      padding: 6px 12px;
-      border-radius: var(--radius-pill);
+      padding: 7px 12px 7px 22px;
+      border-radius: var(--radius-md);
       cursor: pointer;
-      transition: all 0.25s var(--ease-spring);
+      transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
       display: block;
+      border: 1px solid transparent;
     }
 
-    /* [右侧越界修复] 右移 5px→2px、缩放 1.03→1.02、光晕 14px→8px，整体不越出导航条右缘 */
     .nav-sub-item:hover {
       color: var(--text-main);
-      background: var(--glass-surface-elevated);
-      transform: translateX(2px) scale(1.02);
-      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+      background: var(--glass-surface-subtle);
     }
 
     .nav-sub-item.active-sub {
       color: var(--blue-main);
       background: var(--blue-glass);
-      border: 1px solid var(--blue-border);
+      border-color: var(--blue-border);
       font-weight: 700;
-      box-shadow: 0 3px 8px var(--blue-glow);
     }
 
     .nav-footer {
@@ -350,9 +248,9 @@
       background: var(--glass-surface-elevated);
       border: 1px solid var(--glass-border);
       color: var(--text-sub);
-      font-size: 14.5px;
+      font-size: 13.5px;
       font-weight: 600;
-      padding: 9px 18px;
+      padding: 8px 16px;
       border-radius: var(--radius-pill);
       cursor: pointer;
       display: flex;
@@ -360,31 +258,29 @@
       gap: 8px;
       width: 100%;
       justify-content: center;
-      transition: all 0.26s var(--ease-spring);
-      box-shadow: var(--glass-inner-shadow);
+      transition: all 0.2s ease;
       font-family: inherit;
     }
 
     .theme-pill-btn:hover {
       color: var(--text-main);
-      transform: translateY(-2px) scale(1.035);
-      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.09), var(--glass-inner-shadow);
+      border-color: var(--blue-border);
     }
 
     .theme-pill-btn:active {
-      transform: scale(0.97);
+      transform: scale(0.98);
     }
 
     /* 主视口布局 */
     .app-main {
       flex: 1;
-      margin-left: 284px;
-      padding: 36px 48px 80px 28px;
+      margin-left: 272px;
+      padding: 28px 40px 48px 24px;
       max-width: 1440px;
-      width: calc(100% - 284px);
+      width: calc(100% - 272px);
       display: flex;
       flex-direction: column;
-      gap: 28px;
+      gap: 20px;
       position: relative;
       z-index: 10;
     }
@@ -396,173 +292,69 @@
         top: 0;
         bottom: 0;
         width: 100%;
-        margin-bottom: 20px;
+        margin-bottom: 16px;
         border-radius: var(--radius-lg);
       }
       .app-main {
         margin-left: 0;
         width: 100%;
-        padding: 20px;
+        padding: 16px;
       }
       body { flex-direction: column; }
     }
 
-    /* 顶部二级分化切换器 (Liquid Segmented Control) */
+    /* 顶部视口标题区 */
     .view-header-strip {
       display: flex;
-      align-items: center;
+      align-items: baseline;
       justify-content: space-between;
-      gap: 20px;
+      gap: 16px;
       flex-wrap: wrap;
+      padding: 0 4px;
     }
 
     .view-title-wrap h1 {
-      font-size: 28.5px;
+      font-size: 26px;
       font-weight: 800;
       letter-spacing: -0.02em;
       color: var(--text-main);
+      line-height: 1.25;
     }
 
     .view-title-wrap p {
-      font-size: 15.5px;
+      font-size: 14.5px;
       color: var(--text-sub);
-      margin-top: 3px;
-    }
-
-    .subtab-segmented-control {
-      background: var(--glass-surface);
-      border: 1px solid var(--glass-border);
-      padding: 5px;
-      border-radius: var(--radius-pill);
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      box-shadow: var(--shadow-liquid-soft), var(--glass-inner-shadow);
-      backdrop-filter: blur(28px);
-      -webkit-backdrop-filter: blur(28px);
-    }
-
-    .segmented-pill {
-      background: transparent;
-      border: none;
-      padding: 8px 22px;
-      border-radius: var(--radius-pill);
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--text-sub);
-      cursor: pointer;
-      transition: all 0.28s var(--ease-spring);
-      white-space: nowrap;
-      font-family: inherit;
-    }
-
-    .segmented-pill:hover {
-      color: var(--text-main);
-      transform: scale(1.05);
-    }
-
-    .segmented-pill.active {
-      background: var(--glass-surface-elevated);
-      color: var(--text-main);
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08), var(--glass-inner-shadow);
-      transform: scale(1.02);
-    }
-
-    .segmented-pill:active {
-      transform: scale(0.96);
+      margin-top: 4px;
     }
 
     /* 容器显隐控制 */
     .tab-content-panel {
       display: none;
       flex-direction: column;
-      gap: 24px;
-      animation: liquidPanelReveal 0.38s var(--ease-liquid);
+      gap: 18px;
+      animation: panelReveal 0.28s var(--ease-liquid);
     }
 
     .tab-content-panel.active-panel {
       display: flex;
     }
 
-    @keyframes liquidPanelReveal {
-      from { opacity: 0; transform: translateY(12px) scale(0.99); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
+    @keyframes panelReveal {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     /* ==========================================================================
-       液态玻璃卡片公用样式 (iOS 27 Liquid Glass Cards)
+       卡片公用样式
        ========================================================================== */
     .article-card, .engine-deck, .sim-action-bar, .conveyor-box, .gauge-card {
       background: var(--glass-surface);
       border: 1px solid var(--glass-border);
-      box-shadow: var(--shadow-liquid-card), var(--glass-inner-shadow);
-      backdrop-filter: blur(36px) saturate(210%);
-      -webkit-backdrop-filter: blur(36px) saturate(210%);
+      box-shadow: var(--shadow-liquid-card);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       position: relative;
-      overflow: hidden;
-      transition: transform 0.35s var(--ease-spring), box-shadow 0.35s ease, border-color 0.3s ease;
-    }
-
-    .article-card:hover, .engine-deck:hover, .gauge-card:hover, .conveyor-box:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-liquid-float), var(--glass-inner-shadow);
-      border-color: var(--glass-specular);
-    }
-
-    /* 边缘棱镜色散高光条 (Prismatic Specular Rim) */
-    .article-card::before, .engine-deck::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 1.5px;
-         background: linear-gradient(
-           90deg,
-           rgba(255, 255, 255, 0) 0%,
-           rgba(96, 165, 250, 0.5) 25%,
-           var(--glass-specular) 50%,
-           rgba(52, 211, 153, 0.5) 75%,
-           rgba(255, 255, 255, 0) 100%
-         );
-         background-size: 220% 100%;
-         animation: deckRimFlow 6s linear infinite; /* 动效 N9：顶棱棱镜流光巡回 */
-         pointer-events: none;
-         z-index: 2;
-       }
-
-    /* 液态流曳光束 (Sheen Stream Glide) */
-    .article-card::after, .engine-deck::after {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 60%;
-      height: 250%;
-      background: linear-gradient(
-        90deg,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.05) 35%,
-        rgba(255, 255, 255, 0.20) 50%,
-        rgba(255, 255, 255, 0.05) 65%,
-        rgba(255, 255, 255, 0) 100%
-      );
-      pointer-events: none;
-      transform: translate3d(-180%, -50%, 0) rotate(28deg);
-      animation: liquidSheenStream 11s infinite cubic-bezier(0.4, 0, 0.2, 1);
-      z-index: 1;
-    }
-
-    [data-theme="dark"] .article-card::after,
-    [data-theme="dark"] .engine-deck::after {
-      background: linear-gradient(
-        90deg,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(147, 197, 253, 0.04) 35%,
-        rgba(255, 255, 255, 0.16) 50%,
-        rgba(147, 197, 253, 0.04) 65%,
-        rgba(255, 255, 255, 0) 100%
-      );
+      transition: border-color 0.25s ease, box-shadow 0.25s ease;
     }
 
     /* ==========================================================================
@@ -570,7 +362,7 @@
        ========================================================================== */
     .article-card {
       border-radius: var(--radius-xl);
-      padding: 38px 44px;
+      padding: 32px 38px;
       display: flex;
       flex-direction: column;
       gap: 24px;
@@ -578,17 +370,17 @@
 
     .article-hero-heading {
       border-bottom: 1px solid var(--glass-border-subtle);
-      padding-bottom: 20px;
+      padding-bottom: 16px;
     }
 
     .article-hero-heading h2 {
-      font-size: 25.5px;
+      font-size: 22px;
       font-weight: 800;
       color: var(--text-main);
     }
 
     .article-hero-heading p {
-      font-size: 16px;
+      font-size: 15px;
       color: var(--text-sub);
       margin-top: 4px;
     }
@@ -596,7 +388,8 @@
     .article-grid-two {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 34px;
+      gap: 32px;
+      align-items: start;
     }
 
     @media (max-width: 900px) {
@@ -606,10 +399,17 @@
     .prose-column {
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      font-size: 16px;
+      gap: 14px;
+      font-size: 15px;
       color: var(--text-sub);
-      line-height: 1.8;
+      line-height: 1.75;
+    }
+
+    .prose-column h3 {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 2px;
     }
 
     .prose-column strong {
@@ -617,74 +417,33 @@
       font-weight: 700;
     }
 
+    .prose-column code {
+      font-family: var(--font-mono);
+      font-size: 0.88em;
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: var(--glass-surface-subtle);
+      border: 1px solid var(--glass-border);
+      color: var(--text-main);
+    }
+
     .callout-pill-box {
       background: var(--glass-surface-subtle);
       border: 1px solid var(--glass-border);
       border-left: 4px solid var(--blue-main);
-      border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
-      padding: 18px 22px;
-      font-size: 15px;
-      color: var(--text-main);
-      line-height: 1.7;
-      box-shadow: var(--glass-inner-shadow);
-      transition: all 0.3s var(--ease-spring);
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      padding: 18px 20px;
+      font-size: 14.5px;
+      color: var(--text-sub);
+      line-height: 1.75;
     }
 
-    .callout-pill-box:hover {
-      transform: translateX(4px);
-      background: var(--glass-surface-elevated);
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06), var(--glass-inner-shadow);
+    .callout-pill-box strong {
+      color: var(--text-main);
     }
 
     .callout-pill-box.emerald {
       border-left-color: var(--emerald-main);
-    }
-
-    .btn-launch-demo {
-      align-self: flex-start;
-      background: linear-gradient(135deg, var(--blue-main), #1d4ed8);
-      color: white;
-      border: 1px solid rgba(255, 255, 255, 0.35);
-      padding: 12px 26px;
-      border-radius: var(--radius-pill);
-      font-size: 15.5px;
-      font-weight: 700;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.28s var(--ease-spring);
-      box-shadow: 0 8px 22px -4px var(--blue-glow);
-      font-family: inherit;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .btn-launch-demo::after {
-      content: "";
-      position: absolute;
-      top: -50%;
-      left: 0;
-      width: 50%;
-      height: 200%;
-      background: linear-gradient(
-        90deg,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.35) 50%,
-        rgba(255, 255, 255, 0) 100%
-      );
-      transform: translate3d(-150%, 0, 0) rotate(25deg);
-      pointer-events: none;
-      animation: liquidSheenStream 6s infinite ease-in-out;
-    }
-
-    .btn-launch-demo:hover {
-      transform: translateY(-3px) scale(1.045);
-      box-shadow: 0 14px 30px -4px var(--blue-glow);
-    }
-
-    .btn-launch-demo:active {
-      transform: translateY(0) scale(0.96);
     }
 
     /* ==========================================================================
@@ -692,11 +451,11 @@
        ========================================================================== */
     .sim-action-bar {
       border-radius: var(--radius-lg);
-      padding: 14px 22px;
+      padding: 12px 18px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 14px;
+      gap: 12px;
       flex-wrap: wrap;
     }
 
@@ -707,7 +466,7 @@
       flex-wrap: wrap;
     }
 
-    /* 倍速调节胶囊组 (Fluid Speed Controller) */
+    /* 倍速调节胶囊组 */
     .speed-control-group {
       display: flex;
       align-items: center;
@@ -715,189 +474,154 @@
     }
 
     .speed-label {
-      font-size: 12.5px;
+      font-size: 12px;
       font-weight: 700;
       color: var(--text-muted);
       font-family: var(--font-mono);
-      letter-spacing: 0.04em;
     }
 
     .speed-pill-box {
-      background: var(--glass-surface-elevated);
+      background: var(--glass-surface-subtle);
       border: 1px solid var(--glass-border);
       border-radius: var(--radius-pill);
-      padding: 3px 4px;
+      padding: 3px;
       display: flex;
       align-items: center;
       gap: 2px;
-      box-shadow: var(--glass-inner-shadow);
     }
 
     .speed-pill {
       background: transparent;
       border: none;
-      padding: 4px 11px;
+      padding: 4px 10px;
       border-radius: var(--radius-pill);
-      font-size: 12.5px;
+      font-size: 12px;
       font-family: var(--font-mono);
       font-weight: 700;
       color: var(--text-sub);
       cursor: pointer;
-      transition: all 0.22s var(--ease-spring);
+      transition: background-color 0.2s ease, color 0.2s ease;
     }
 
     .speed-pill:hover {
       color: var(--text-main);
-      transform: scale(1.08);
     }
 
     .speed-pill.active {
       background: var(--blue-main);
       color: #ffffff;
-      box-shadow: 0 2px 8px var(--blue-glow);
-      transform: scale(1.02);
-    }
-
-    [data-theme="dark"] .speed-pill.active {
-      background: var(--blue-main);
-      color: #ffffff;
     }
 
     .btn-pill-action {
-      background: linear-gradient(135deg, var(--blue-main), #1d4ed8);
+      background: var(--blue-main);
       color: white;
-      border: 1px solid rgba(255, 255, 255, 0.35);
-      padding: 9px 22px;
+      border: 1px solid transparent;
+      padding: 8px 18px;
       border-radius: var(--radius-pill);
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 700;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: all 0.26s var(--ease-spring);
-      box-shadow: 0 4px 14px var(--blue-glow);
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      box-shadow: 0 3px 10px var(--blue-glow);
       font-family: inherit;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .btn-pill-action::after {
-      content: "";
-      position: absolute;
-      top: -50%;
-      left: 0;
-      width: 50%;
-      height: 200%;
-      background: linear-gradient(
-        90deg,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.35) 50%,
-        rgba(255, 255, 255, 0) 100%
-      );
-      transform: translate3d(-150%, 0, 0) rotate(25deg);
-      pointer-events: none;
-      animation: liquidSheenStream 6s infinite ease-in-out;
     }
 
     .btn-pill-action:hover {
-      transform: translateY(-2.5px) scale(1.05);
-      box-shadow: 0 10px 26px var(--blue-glow);
+      filter: brightness(1.08);
+      transform: translateY(-1px);
     }
 
     .btn-pill-action:active {
-      transform: translateY(0) scale(0.96);
+      transform: scale(0.97);
     }
 
     .btn-pill-subtle {
       background: var(--glass-surface-elevated);
       color: var(--text-main);
       border: 1px solid var(--glass-border);
-      padding: 8px 18px;
+      padding: 7px 14px;
       border-radius: var(--radius-pill);
-      font-size: 14.5px;
+      font-size: 13.5px;
       font-weight: 600;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: all 0.24s var(--ease-spring);
-      box-shadow: var(--glass-inner-shadow);
+      white-space: nowrap;
+      transition: all 0.2s ease;
       font-family: inherit;
     }
 
     .btn-pill-subtle:hover {
-      background: var(--glass-surface);
-      transform: translateY(-2px) scale(1.04);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08), var(--glass-inner-shadow);
+      border-color: var(--blue-border);
+      background: var(--glass-surface-subtle);
     }
 
     .btn-pill-subtle:active {
-      transform: translateY(0) scale(0.96);
+      transform: scale(0.97);
     }
 
     .sim-input-box {
       display: flex;
       align-items: center;
       gap: 8px;
-      flex: 1;
-      min-width: 240px;
-      max-width: 380px;
+      flex: 1 1 320px;
+      min-width: 260px;
     }
 
     .sim-input-box input {
       flex: 1;
+      min-width: 0;
       background: var(--glass-surface-elevated);
       border: 1px solid var(--glass-border);
       color: var(--text-main);
-      padding: 8px 16px;
+      padding: 7px 14px;
       border-radius: var(--radius-pill);
-      font-size: 14.5px;
+      font-size: 13.5px;
       font-family: var(--font-mono);
       outline: none;
-      box-shadow: var(--glass-inner-shadow);
-      transition: all 0.25s var(--ease-spring);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
 
     .sim-input-box input:focus {
       border-color: var(--blue-main);
-      box-shadow: 0 0 0 3px var(--blue-glow), var(--glass-inner-shadow);
-      transform: scale(1.015);
+      box-shadow: 0 0 0 3px var(--blue-glow);
     }
 
-    /* 步数徽章（实时解说横幅已按需求移除，徽章并入控制栏） */
+    /* 步数徽章 */
     .step-badge {
       font-size: 12px;
       font-family: var(--font-mono);
       font-weight: 700;
       color: var(--text-muted);
-      background: var(--glass-surface-elevated);
+      background: var(--glass-surface-subtle);
       border: 1px solid var(--glass-border);
-      padding: 5px 13px;
+      padding: 5px 12px;
       border-radius: var(--radius-pill);
       white-space: nowrap;
-      box-shadow: var(--glass-inner-shadow);
-      transition: all 0.2s;
       align-self: center;
-      margin-left: 2px;
     }
 
     .step-badge.anim-badge-pop {
-      animation: badgePop 0.35s var(--ease-spring);
+      animation: badgePop 0.3s var(--ease-spring);
     }
     @keyframes badgePop {
-      0% { transform: scale(0.85); }
-      50% { transform: scale(1.12); border-color: var(--blue-main); color: var(--blue-main); }
+      0% { transform: scale(0.9); }
+      50% { transform: scale(1.08); border-color: var(--blue-main); color: var(--blue-main); }
       100% { transform: scale(1); }
     }
 
     /* 请求流传送带 */
     .conveyor-box {
       border-radius: var(--radius-lg);
-      padding: 14px 20px;
+      padding: 12px 18px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
     }
 
     .conveyor-track {
@@ -905,55 +629,46 @@
       align-items: center;
       gap: 10px;
       overflow-x: auto;
-        /* [溢出隔断修复] 激活块动效 translateY(-7px)+scale(1.22) 向上外扩约 12px，
-           原 6px/10px 上下内边距不足，被滚动容器纵向裁切造成元素隔断；
-           scale 缩放同时令最左/最右元素左右各外扩 6~10px，原 2px 水平内边距
-           同样不足，最左元素左缘被裁断。统一扩充至 20px/12px/22px 后动效完整
-           显示，横向滚动行为保持不变。 */
-      padding: 20px 12px 22px 12px;
+      padding: 10px 6px;
       scroll-behavior: smooth;
       border-radius: var(--radius-sm);
-      /* 动效 N4：传送带斜纹定向流动 */
-      background-image: repeating-linear-gradient(-45deg, rgba(100, 116, 139, 0.10) 0 5.5px, transparent 5.5px 16px);
-      animation: conveyorBeltSlide 1.4s linear infinite;
+      background: var(--glass-surface-subtle);
+      border: 1px solid var(--glass-border-subtle);
     }
 
     .conveyor-track::-webkit-scrollbar, .flow-rail::-webkit-scrollbar {
       height: 6px;
     }
     .conveyor-track::-webkit-scrollbar-thumb, .flow-rail::-webkit-scrollbar-thumb {
-      background: var(--glass-border-subtle);
+      background: var(--glass-border);
       border-radius: var(--radius-pill);
     }
 
-    /* 传送带元素块缩放动效 */
     .stream-block {
-      min-width: 52px;
-      padding: 0 10px;
-      height: 48px;
+      min-width: 48px;
+      padding: 0 12px;
+      height: 40px;
       background: var(--glass-surface-elevated);
       border: 1px solid var(--glass-border);
-      border-radius: var(--radius-md);
+      border-radius: var(--radius-sm);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 15.5px;
+      font-size: 14.5px;
       font-weight: 700;
+      font-family: var(--font-mono);
       color: var(--text-main);
       flex-shrink: 0;
-      transition: all 0.28s var(--ease-spring);
+      transition: all 0.2s ease;
       position: relative;
-      box-shadow: var(--glass-inner-shadow);
       cursor: pointer;
       user-select: none;
       white-space: nowrap;
     }
 
     .stream-block:hover {
-      transform: translateY(-4px) scale(1.15);
-      background: var(--glass-surface-elevated);
+      transform: translateY(-2px);
       border-color: var(--blue-main);
-      box-shadow: 0 10px 24px -4px var(--blue-glow), var(--glass-inner-shadow);
       z-index: 5;
     }
 
@@ -961,58 +676,30 @@
       background: var(--amber-glass);
       border-color: var(--amber-main);
       color: var(--amber-main);
-      animation: activeReqPulse 1.8s infinite ease-in-out;
-      position: relative;
+      box-shadow: 0 0 0 2px var(--amber-glass), 0 4px 12px rgba(217, 119, 6, 0.22);
+      transform: translateY(-2px);
       z-index: 10;
     }
 
-    @keyframes activeReqPulse {
-      0%, 100% {
-        transform: translateY(-3px) scale(1.12);
-        box-shadow: 0 8px 20px rgba(217, 119, 6, 0.35), 0 0 0 2px var(--amber-main);
-      }
-      50% {
-        transform: translateY(-7px) scale(1.18);
-        box-shadow: 0 14px 30px rgba(217, 119, 6, 0.5), 0 0 0 5px var(--amber-glass);
-      }
-    }
-
-    .stream-block.active-req::after {
-      content: "";
-      position: absolute;
-      bottom: -7px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: var(--amber-main);
-      box-shadow: 0 0 8px var(--amber-main);
-    }
-
-    .stream-block.active-req:hover {
-      transform: translateY(-7px) scale(1.22);
-    }
-
     .stream-block.passed {
-      opacity: 0.35;
+      opacity: 0.42;
     }
 
     /* 引擎展示卡片 */
     .engine-deck {
       border-radius: var(--radius-xl);
-      padding: 28px 32px;
+      padding: 20px 24px;
       display: flex;
       flex-direction: column;
-      gap: 22px;
+      gap: 16px;
     }
 
     .engine-deck.lru-border {
-      border-top: 5px solid var(--blue-main);
+      border-top: 4px solid var(--blue-main);
     }
 
     .engine-deck.lfu-border {
-      border-top: 5px solid var(--emerald-main);
+      border-top: 4px solid var(--emerald-main);
     }
 
     .deck-top-row {
@@ -1020,69 +707,72 @@
       align-items: center;
       justify-content: space-between;
       border-bottom: 1px solid var(--glass-border-subtle);
-      padding-bottom: 14px;
+      padding-bottom: 12px;
+      gap: 12px;
     }
 
     .deck-title-area h3 {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 800;
       color: var(--text-main);
     }
 
     .deck-title-area p {
-      font-size: 14.5px;
+      font-size: 13.5px;
       color: var(--text-sub);
     }
 
     .rate-pill-display {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
+    }
+
+    .rate-label-text {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
     }
 
     .rate-pill-display .val {
-      font-size: 28.5px;
+      font-size: 24px;
       font-weight: 800;
       font-family: var(--font-mono);
       line-height: 1;
     }
 
     .status-chip {
-      padding: 5px 12px;
+      padding: 4px 11px;
       border-radius: var(--radius-pill);
-      font-size: 12.5px;
+      font-size: 12px;
       font-weight: 700;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.03em;
       border: 1px solid transparent;
-      transition: all 0.25s var(--ease-spring);
-      /* 收尾打磨：固定最小宽度居中，HIT/MISS/EVICT 切换时消除右侧数值抖动 */
-      min-width: 68px;
+      transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+      min-width: 62px;
       text-align: center;
     }
 
-    .status-chip:hover {
-      transform: scale(1.06);
-    }
-
     .status-chip.anim-pop {
-      animation: statusChipPop 0.45s var(--ease-spring);
+      animation: statusChipPop 0.35s var(--ease-spring);
     }
     @keyframes statusChipPop {
-      0% { transform: scale(0.5); opacity: 0; }
-      65% { transform: scale(1.2); opacity: 1; }
+      0% { transform: scale(0.8); opacity: 0.4; }
+      65% { transform: scale(1.08); opacity: 1; }
       100% { transform: scale(1); }
     }
 
     .status-chip.hit { background: var(--emerald-glass); color: var(--emerald-main); border-color: var(--emerald-border); }
     .status-chip.miss { background: var(--rose-glass); color: var(--rose-main); border-color: rgba(244,63,94,0.3); }
     .status-chip.evict { background: var(--amber-glass); color: var(--amber-main); border-color: rgba(217,119,6,0.35); }
-    .status-chip.idle { background: var(--glass-surface-elevated); color: var(--text-muted); border-color: var(--glass-border); }
+    .status-chip.idle { background: var(--glass-surface-subtle); color: var(--text-muted); border-color: var(--glass-border); }
 
-    /* 物理槽位 Grid 与强力物理动效 */
+    /* 物理槽位 Grid */
     .slot-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 14px;
+      gap: 12px;
+      align-items: stretch;
     }
 
     @media (max-width: 768px) {
@@ -1091,205 +781,123 @@
 
     .slot-card {
       background: var(--glass-surface-subtle);
-      border: 1px solid var(--glass-border);
+      border: 1.5px solid var(--glass-border);
       border-radius: var(--radius-md);
-      padding: 14px 10px;
+      padding: 12px 10px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 116px;
+      min-height: 104px;
       position: relative;
-      transition: transform 0.32s var(--ease-spring), box-shadow 0.32s ease, border-color 0.3s ease, background-color 0.3s ease;
-        box-shadow: var(--glass-inner-shadow);
-        cursor: default; /* 收尾打磨：槽位卡为信息展示件，移除误导性手型光标 */
-        user-select: none;
-      }
-
-      /* 动效 N2：槽位卡交错浮升入场（backwards 填充，动画结束后释放 transform，不阻断 hover 缩放） */
-      .slot-grid .slot-card { animation: staggerRise 0.5s var(--ease-spring) backwards; }
-      .slot-grid .slot-card:nth-child(2) { animation-delay: 0.06s; }
-      .slot-grid .slot-card:nth-child(3) { animation-delay: 0.12s; }
-      .slot-grid .slot-card:nth-child(4) { animation-delay: 0.18s; }
-      .slot-grid .slot-card:nth-child(5) { animation-delay: 0.24s; }
-      .slot-grid .slot-card:nth-child(6) { animation-delay: 0.30s; }
-      .slot-grid .slot-card:nth-child(7) { animation-delay: 0.36s; }
-      .slot-grid .slot-card:nth-child(8) { animation-delay: 0.42s; }
-
-      /* 动效 N3：空闲槽位边框呼吸微光（仅描边与投影，避免与入场动画的 transform 相互覆盖） */
-      .slot-card.slot-empty {
-        animation: staggerRise 0.5s var(--ease-spring) backwards, idleSlotBreathe 3.2s ease-in-out infinite;
-      }
-
-      .slot-card:hover {
-      transform: translateY(-5px) scale(1.055);
-      background: var(--glass-surface-elevated);
-      border-color: var(--glass-specular);
-      box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.12), var(--glass-inner-shadow);
-      z-index: 5;
+      transition: box-shadow 0.25s ease, border-color 0.25s ease, background-color 0.25s ease;
+      cursor: default;
+      user-select: none;
     }
 
-    .slot-card:hover .slot-glyph {
-      transform: scale(1.08);
-      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
-    }
+    .slot-grid .slot-card { animation: staggerRise 0.4s var(--ease-spring) backwards; }
+    .slot-grid .slot-card:nth-child(2) { animation-delay: 0.04s; }
+    .slot-grid .slot-card:nth-child(3) { animation-delay: 0.08s; }
+    .slot-grid .slot-card:nth-child(4) { animation-delay: 0.12s; }
 
     .slot-card.hit-active {
       border-color: var(--emerald-main);
       background: var(--emerald-glass);
-      box-shadow: 0 8px 20px var(--emerald-glow), var(--glass-inner-shadow);
+      box-shadow: 0 0 0 2px var(--emerald-glass);
     }
 
     .slot-card.miss-active {
       border-color: var(--amber-main);
       background: var(--amber-glass);
-      box-shadow: 0 8px 20px rgba(217, 119, 6, 0.25), var(--glass-inner-shadow);
+      box-shadow: 0 0 0 2px var(--amber-glass);
     }
 
-    /* 强力动效 1：命中能量冲击波脉冲 */
+    /* 命中脉冲 */
     .slot-card.anim-hit-pulse {
-      animation: slotHitPulse 0.65s var(--ease-spring);
+      animation: slotHitPulse 0.55s var(--ease-spring);
     }
     @keyframes slotHitPulse {
-      0% {
-        transform: scale(0.94) translateY(2px);
-        border-color: var(--emerald-main);
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8), 0 8px 20px var(--emerald-glow);
-      }
-      40% {
-        transform: scale(1.10) translateY(-6px);
-        background: var(--emerald-glass);
-        border-color: var(--emerald-main);
-        box-shadow: 0 0 0 12px rgba(16, 185, 129, 0), 0 14px 30px var(--emerald-glow);
-      }
-      100% {
-        transform: scale(1) translateY(0);
-        border-color: var(--emerald-main);
-        background: var(--emerald-glass);
-        box-shadow: 0 8px 20px var(--emerald-glow), var(--glass-inner-shadow);
-      }
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.55); }
+      50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 2px var(--emerald-glass); }
     }
 
-    /* 强力动效 2：缺页注入弹性飞落 */
+    /* 缺页注入 */
     .slot-card.anim-slot-ingest {
-      animation: slotIngest 0.6s var(--ease-spring);
+      animation: slotIngest 0.45s var(--ease-spring);
     }
     @keyframes slotIngest {
-      0% {
-        transform: translateY(-22px) scale(0.82);
-        opacity: 0;
-        border-color: var(--blue-main);
-      }
-      50% {
-        transform: translateY(4px) scale(1.08);
-        opacity: 1;
-        border-color: var(--amber-main);
-        background: var(--amber-glass);
-        box-shadow: 0 0 0 8px rgba(217, 119, 6, 0.25);
-      }
-      100% {
-        transform: translateY(0) scale(1);
-        border-color: var(--amber-main);
-        background: var(--amber-glass);
-        box-shadow: 0 8px 20px rgba(217, 119, 6, 0.25), var(--glass-inner-shadow);
-      }
+      0% { transform: translateY(-10px); opacity: 0.3; }
+      100% { transform: translateY(0); opacity: 1; }
     }
 
-    /* 强力动效 3：淘汰置换震颤与重塑 */
+    /* 淘汰置换 */
     .slot-card.anim-slot-evict-replace {
-      animation: slotEvictReplace 0.75s var(--ease-spring);
+      animation: slotEvictReplace 0.6s var(--ease-spring);
     }
     @keyframes slotEvictReplace {
-      0% {
-        transform: scale(1);
-        border-color: var(--rose-main);
-        background: var(--rose-glass);
-      }
-      20% {
-        transform: translateX(-4px) rotate(-3deg) scale(1.04);
-        border-color: var(--rose-main);
-        box-shadow: 0 0 0 6px rgba(225, 29, 72, 0.35);
-      }
-      40% {
-        transform: translateX(4px) rotate(3deg) scale(0.92);
-        opacity: 0.5;
-      }
-      65% {
-        transform: translateY(-8px) scale(1.1);
-        opacity: 1;
-        border-color: var(--amber-main);
-        background: var(--amber-glass);
-      }
-      100% {
-        transform: translateY(0) scale(1);
-        border-color: var(--amber-main);
-        background: var(--amber-glass);
-        box-shadow: 0 8px 20px rgba(217, 119, 6, 0.25), var(--glass-inner-shadow);
-      }
+      0% { border-color: var(--rose-main); background: var(--rose-glass); }
+      35% { transform: translateX(-3px); border-color: var(--rose-main); }
+      65% { transform: translateX(3px); border-color: var(--amber-main); background: var(--amber-glass); }
+      100% { transform: translateX(0); border-color: var(--amber-main); background: var(--amber-glass); }
     }
 
     .slot-num-tag {
       position: absolute;
       top: 6px;
       left: 8px;
-      font-size: 11px;
+      font-size: 10.5px;
       color: var(--text-muted);
       font-family: var(--font-mono);
       font-weight: 700;
     }
 
     .slot-glyph {
-      min-width: 52px;
+      min-width: 48px;
       width: auto;
       padding: 0 10px;
-      height: 42px;
+      height: 36px;
       border-radius: var(--radius-sm);
       background: var(--glass-surface-elevated);
       border: 1px solid var(--glass-border);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 17px;
+      font-size: 16px;
       font-weight: 800;
+      font-family: var(--font-mono);
       color: var(--text-main);
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-      transition: all 0.3s var(--ease-spring);
       white-space: nowrap;
     }
 
     .slot-meta-text {
-      font-size: 12px;
+      font-size: 11.5px;
       color: var(--text-sub);
       font-family: var(--font-mono);
       font-weight: 600;
       margin-top: 6px;
     }
 
-    /* 双向链表可视化与节点悬浮缩放 */
+    /* 双向链表可视化 */
     .flow-rail {
       background: var(--glass-surface-subtle);
       border: 1px solid var(--glass-border);
       border-radius: var(--radius-md);
-      padding: 16px;
+      padding: 12px 14px;
       display: flex;
       align-items: center;
-      gap: 10px;
-      overflow-x: auto;
-      box-shadow: var(--glass-inner-shadow);
+      flex-wrap: wrap;
+      gap: 8px;
+      min-height: 58px;
     }
 
     .flow-cap-badge {
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 700;
       padding: 4px 10px;
       border-radius: var(--radius-pill);
       white-space: nowrap;
       border: 1px solid transparent;
-      transition: all 0.24s var(--ease-spring);
-    }
-
-    .flow-cap-badge:hover {
-      transform: scale(1.05);
     }
 
     .flow-cap-badge.mru { background: var(--blue-glass); color: var(--blue-main); border-color: var(--blue-border); }
@@ -1299,82 +907,54 @@
       background: var(--glass-surface-elevated);
       border: 1px solid var(--glass-border);
       border-radius: var(--radius-sm);
-      padding: 6px 14px;
-      font-size: 15.5px;
+      padding: 5px 12px;
+      font-size: 14.5px;
       font-weight: 700;
+      font-family: var(--font-mono);
       color: var(--text-main);
       flex-shrink: 0;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-      transition: all 0.25s var(--ease-spring);
-      cursor: default; /* 收尾打磨：信息展示件，移除误导性手型光标 */
-      min-width: 42px;
+      cursor: default;
+      min-width: 40px;
       text-align: center;
     }
 
-    .flow-node-box:hover {
-      transform: translateY(-3px) scale(1.12);
-      border-color: var(--blue-main);
-      color: var(--blue-main);
-      box-shadow: 0 6px 18px var(--blue-glow);
-    }
-
-    /* 强力动效 4：MRU 头部飞入 */
     .flow-node-box.anim-mru-enter {
-      animation: mruEnter 0.55s var(--ease-spring);
+      animation: mruEnter 0.45s var(--ease-spring);
       border-color: var(--blue-main);
       color: var(--blue-main);
       background: var(--blue-glass);
     }
     @keyframes mruEnter {
-      0% {
-        transform: translateX(-24px) scale(0.6);
-        opacity: 0;
-      }
-      60% {
-        transform: translateX(4px) scale(1.18);
-        opacity: 1;
-        box-shadow: 0 0 16px var(--blue-glow);
-      }
-      100% {
-        transform: translateX(0) scale(1);
-      }
+      0% { transform: translateX(-14px) scale(0.85); opacity: 0; }
+      100% { transform: translateX(0) scale(1); opacity: 1; }
     }
 
-    /* 频次桶可视化与多级缩放动效 */
+    /* 频次桶可视化 */
     .bucket-stack {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
     }
 
     .bucket-row-item {
       background: var(--glass-surface-subtle);
       border: 1px solid var(--glass-border);
       border-radius: var(--radius-md);
-      padding: 10px 16px;
+      padding: 9px 14px;
       display: flex;
       align-items: center;
-      gap: 14px;
-      box-shadow: var(--glass-inner-shadow);
-      transition: all 0.28s var(--ease-spring);
+      flex-wrap: wrap;
+      gap: 10px;
       cursor: default;
-    }
-
-    .bucket-row-item:hover {
-      transform: translateY(-2px) scale(1.025);
-      background: var(--glass-surface-elevated);
-      border-color: var(--emerald-border);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), var(--glass-inner-shadow);
     }
 
     .bucket-row-item.is-min {
       border-color: var(--emerald-main);
       background: var(--emerald-glass);
-      box-shadow: 0 4px 14px var(--emerald-glow), var(--glass-inner-shadow);
     }
 
     .bucket-tag-pill {
-      font-size: 12.5px;
+      font-size: 12px;
       font-weight: 700;
       font-family: var(--font-mono);
       padding: 3px 10px;
@@ -1382,79 +962,44 @@
       background: var(--glass-surface-elevated);
       border: 1px solid var(--glass-border);
       white-space: nowrap;
-      transition: all 0.22s var(--ease-spring);
-      position: relative;
+      color: var(--text-main);
     }
 
-    /* 强力动效 5：LFU 最小频次锁定雷达波 */
-    .bucket-row-item.is-min .bucket-tag-pill::after {
-      content: "";
-      position: absolute;
-      inset: -2px;
-      border-radius: var(--radius-pill);
-      border: 1.5px solid var(--emerald-main);
-      animation: radarRing 2.2s infinite cubic-bezier(0.2, 0.8, 0.2, 1);
-      pointer-events: none;
-    }
-    @keyframes radarRing {
-      0% { transform: scale(1); opacity: 0.8; }
-      70% { transform: scale(1.25); opacity: 0; }
-      100% { transform: scale(1.25); opacity: 0; }
-    }
-
-    .bucket-row-item:hover .bucket-tag-pill {
-      transform: scale(1.04);
+    .bucket-row-item.is-min .bucket-tag-pill {
+      border-color: var(--emerald-border);
+      color: var(--emerald-main);
     }
 
     .bucket-page-chip {
       background: var(--glass-surface-elevated);
       border: 1px solid var(--glass-border);
-      padding: 4px 12px;
+      padding: 4px 11px;
       border-radius: var(--radius-sm);
       font-weight: 700;
-      font-size: 14.5px;
-      box-shadow: var(--glass-inner-shadow);
-      transition: all 0.22s var(--ease-spring);
+      font-size: 13.5px;
+      font-family: var(--font-mono);
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      cursor: default; /* 收尾打磨：信息展示件，移除误导性手型光标 */
+      cursor: default;
     }
 
-    .bucket-page-chip:hover {
-      transform: scale(1.12);
-      border-color: var(--emerald-main);
-      color: var(--emerald-main);
-      box-shadow: 0 4px 14px var(--emerald-glow), var(--glass-inner-shadow);
-    }
-
-    /* 强力动效 6：LFU 频次跃迁升维 */
     .bucket-page-chip.anim-chip-ascend {
-      animation: chipAscend 0.65s var(--ease-spring);
+      animation: chipAscend 0.5s var(--ease-spring);
       border-color: var(--emerald-main);
       color: var(--emerald-main);
       background: var(--emerald-glass);
     }
     @keyframes chipAscend {
-      0% {
-        transform: translateY(16px) scale(0.6);
-        opacity: 0;
-      }
-      50% {
-        transform: translateY(-5px) scale(1.22);
-        opacity: 1;
-        box-shadow: 0 0 16px var(--emerald-glow);
-      }
-      100% {
-        transform: translateY(0) scale(1);
-      }
+      0% { transform: translateY(10px) scale(0.8); opacity: 0; }
+      100% { transform: translateY(0) scale(1); opacity: 1; }
     }
 
     /* 竞技场并列网格 */
     .arena-split {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 26px;
+      gap: 20px;
     }
 
     @media (max-width: 1040px) {
@@ -1464,294 +1009,152 @@
     /* 对比度量进度条 */
     .gauge-card {
       border-radius: var(--radius-lg);
-      padding: 22px 28px;
+      padding: 18px 22px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
     }
 
     .bar-line {
       display: flex;
       align-items: center;
       gap: 14px;
-      font-size: 15px;
+      font-size: 14.5px;
     }
 
     .bar-line-name {
-      width: 52px;
+      width: 48px;
       font-weight: 700;
       font-family: var(--font-mono);
     }
 
     .bar-line-track {
       flex: 1;
-      height: 18px;
-      background: var(--glass-surface-elevated);
+      height: 14px;
+      background: var(--glass-surface-subtle);
+      border: 1px solid var(--glass-border-subtle);
       border-radius: var(--radius-pill);
       overflow: hidden;
       position: relative;
-      box-shadow: var(--glass-inner-shadow);
     }
 
     .bar-line-fill {
       height: 100%;
       border-radius: var(--radius-pill);
-      transition: width 0.6s cubic-bezier(0.34, 1.3, 0.64, 1);
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      padding-right: 20px;
-      font-size: 12px;
-      font-weight: 700;
-      color: white;
-      position: relative;
-      overflow: hidden;
+      transition: width 0.5s cubic-bezier(0.34, 1.2, 0.64, 1);
     }
 
-    .bar-line-fill::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 100%);
-      background-size: 200% 100%;
-      animation: liquidBarSheen 3s infinite linear;
-      pointer-events: none;
-    }
-    @keyframes liquidBarSheen {
-      0% { transform: translateX(-100%); }
-      100% { transform: translateX(100%); }
-    }
-
-    .bar-line-fill.lru { background: linear-gradient(90deg, #1d4ed8, var(--blue-main)); box-shadow: 0 2px 8px var(--blue-glow); }
-    .bar-line-fill.lfu { background: linear-gradient(90deg, #047857, var(--emerald-main)); box-shadow: 0 2px 8px var(--emerald-glow); }
+    .bar-line-fill.lru { background: var(--blue-main); }
+    .bar-line-fill.lfu { background: var(--emerald-main); }
 
     .bar-line-num {
-      width: 52px;
+      width: 60px;
       text-align: right;
       font-family: var(--font-mono);
       font-weight: 700;
     }
 
-    /* 对比表格行悬浮交互动效与文字排版 */
+    /* 对比表格排版 */
     .tab-content-panel table tbody tr {
-      transition: all 0.25s var(--ease-spring);
+      transition: background-color 0.2s ease;
       cursor: default;
     }
     .tab-content-panel table tbody tr:hover {
-      background: var(--glass-surface-elevated);
-      transform: scale(1.01) translateY(-1px);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+      background: var(--glass-surface-subtle);
     }
     .tab-content-panel table th {
-      font-size: 14.5px;
+      font-size: 13.5px;
       font-weight: 700;
-      letter-spacing: 0.02em;
+      white-space: nowrap;
+      padding: 12px 14px;
     }
     .tab-content-panel table td {
-      padding: 14px 16px;
-      font-size: 15px;
+      padding: 14px;
+      font-size: 14.5px;
       line-height: 1.6;
+      vertical-align: middle;
     }
 
     /* ==========================================================================
-       动效增强系统 (Motion Enhancement System)：15 种新增动态效果统一编排
-       N1  titleShimmer      顶部标题渐变流光扫过
-       N2  staggerRise       槽位/专栏/表格行交错浮升入场
-       N3  idleSlotBreathe   空闲槽位边框呼吸微光
-       N4  conveyorBeltSlide 传送带轨道斜纹定向流动
-       N5  arrowFlowWave     双向链表箭头逐个波传
-       N6  rateFlip          命中率数字 3D 翻牌刷新
-       N7  barEdgeGlow       对比条前沿光点脉冲
-       N8  winnerGlowPulse   领先引擎进度条呼吸增亮
-       N9  deckRimFlow       卡片顶棱棱镜流光巡回
-       N10 minPointerBob     LFU 最低频桶指针闪烁
-       N11 navLiveDot        导航激活项指示灯脉冲
-       N12 rippleSpread      全局按钮点击涟漪扩散
-       N13 tiltHover         度量卡 3D 悬停倾斜
-       N14 evictGhostFloat   被淘汰页面幽灵浮出消散
-       N15 arrowNudge        演示按钮箭头悬停推进
+       动效系统 (Functional Motion System)
        ========================================================================== */
-
-    /* N1 顶部标题渐变流光 */
-    #topDisplayTitle {
-      background: linear-gradient(100deg,
-        var(--text-main) 0%, var(--text-main) 32%,
-        var(--blue-main) 46%, var(--emerald-main) 56%,
-        var(--text-main) 70%, var(--text-main) 100%);
-      background-size: 220% 100%;
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      animation: titleShimmer 6s linear infinite;
-    }
-    @keyframes titleShimmer {
-      0% { background-position: 120% 0; }
-      100% { background-position: -120% 0; }
-    }
-
-    /* N2 交错浮升入场 keyframes（应用点见 .slot-grid 与下方版面规则） */
     @keyframes staggerRise {
-      from { opacity: 0; transform: translateY(16px) scale(0.97); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
-    .article-hero-heading { animation: staggerRise 0.5s var(--ease-spring) backwards; }
-    .article-grid-two .prose-column { animation: staggerRise 0.55s var(--ease-spring) backwards; }
-    .article-grid-two .prose-column:nth-child(2) { animation-delay: 0.12s; }
-    .tab-content-panel table tbody tr { animation: staggerRise 0.5s var(--ease-spring) backwards; }
-    .tab-content-panel table tbody tr:nth-child(2) { animation-delay: 0.08s; }
-    .tab-content-panel table tbody tr:nth-child(3) { animation-delay: 0.16s; }
-    .tab-content-panel table tbody tr:nth-child(4) { animation-delay: 0.24s; }
+    .article-hero-heading { animation: staggerRise 0.35s var(--ease-liquid) backwards; }
+    .article-grid-two .prose-column { animation: staggerRise 0.4s var(--ease-liquid) backwards; }
+    .article-grid-two .prose-column:nth-child(2) { animation-delay: 0.08s; }
 
-    /* N3 空闲槽位呼吸 */
-    @keyframes idleSlotBreathe {
-      0%, 100% { border-color: var(--glass-border); box-shadow: var(--glass-inner-shadow); }
-      50% { border-color: var(--blue-border); box-shadow: 0 0 16px -2px var(--blue-glow), var(--glass-inner-shadow); }
-    }
-
-    /* N4 传送带斜纹流动（沿 x 轴周期 16px*√2≈22.63px，无缝循环） */
-    @keyframes conveyorBeltSlide {
-      from { background-position: 0 0; }
-      to { background-position: 22.63px 0; }
-    }
-
-    /* N5 链表箭头波流（纯色相波，重建节点时不产生位移跳动） */
+    /* 链表箭头波流 */
     .flow-arrow {
       display: inline-block;
       color: var(--text-muted);
-      animation: arrowFlowWave 2s infinite ease-in-out;
-    }
-    @keyframes arrowFlowWave {
-      0%, 100% { color: var(--text-muted); opacity: 0.65; }
-      50% { color: var(--blue-main); opacity: 1; }
+      font-size: 13px;
     }
 
-    /* N6 命中率数字 3D 翻牌 */
+    /* 命中率数字刷新 */
     .rate-pill-display .val.anim-rate-flip {
-      transform-origin: center;
-      animation: rateFlip 0.5s var(--ease-spring);
+      animation: rateFlip 0.35s var(--ease-spring);
     }
     @keyframes rateFlip {
-      0% { transform: rotateX(88deg) translateY(-5px); opacity: 0; }
-      55% { transform: rotateX(-14deg); opacity: 1; }
-      100% { transform: rotateX(0deg); opacity: 1; }
+      0% { transform: translateY(-4px); opacity: 0.4; }
+      100% { transform: translateY(0); opacity: 1; }
     }
 
-    /* N7 对比条前沿光点脉冲 */
-    .bar-line-fill::before {
-      content: "";
-      position: absolute;
-      right: 4px;
-      top: 50%;
-      margin-top: -4px;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.95);
-      animation: barEdgeGlow 1.4s infinite ease-in-out;
-      pointer-events: none;
-    }
-    @keyframes barEdgeGlow {
-      0%, 100% { opacity: 0.45; box-shadow: 0 0 5px 1px rgba(255,255,255,0.6); }
-      50% { opacity: 1; box-shadow: 0 0 13px 4px rgba(255,255,255,0.95); }
+    /* 领先引擎进度条微亮 */
+    .bar-line-fill.leading {
+      box-shadow: 0 0 10px var(--emerald-glow);
     }
 
-    /* N8 领先引擎进度条呼吸增亮 */
-    .bar-line-fill.leading { animation: winnerGlowPulse 1.6s infinite ease-in-out; }
-    @keyframes winnerGlowPulse {
-      0%, 100% { filter: brightness(1); }
-      50% { filter: brightness(1.3); }
-    }
-
-    /* N9 顶棱棱镜流光（keyframes，应用点见 .article-card::before） */
-    @keyframes deckRimFlow {
-      from { background-position: 220% 0; }
-      to { background-position: -220% 0; }
-    }
-
-    /* N10 LFU 最低频桶指针闪烁 */
-    .bucket-row-item { position: relative; }
-    .bucket-row-item.is-min::before {
-      content: "▸";
-      position: absolute;
-      left: 5px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--emerald-main);
-      font-size: 14.5px;
-      animation: minPointerBob 1.3s infinite ease-in-out;
-    }
-    @keyframes minPointerBob {
-      0%, 100% { opacity: 0.4; text-shadow: none; }
-      50% { opacity: 1; text-shadow: 0 0 10px var(--emerald-glow); }
-    }
-
-    /* N11 导航激活项指示灯脉冲 */
+    /* 导航激活项指示灯 */
     .nav-sub-item { position: relative; }
     .nav-sub-item.active-sub::before {
       content: "";
       position: absolute;
-      left: 4px;
+      left: 9px;
       top: 50%;
-      margin-top: -2.5px;
-      width: 5px;
-      height: 5px;
+      margin-top: -3px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
       background: var(--blue-main);
-      box-shadow: 0 0 8px var(--blue-glow);
-      animation: navLiveDot 1.6s infinite ease-in-out;
-    }
-    @keyframes navLiveDot {
-      0%, 100% { transform: scale(0.8); opacity: 0.5; }
-      50% { transform: scale(1.5); opacity: 1; }
     }
 
-    /* N12 全局按钮点击涟漪扩散 */
+    /* 全局按钮点击涟漪扩散 */
     button { position: relative; overflow: hidden; }
     .ripple-ink {
       position: absolute;
       border-radius: 50%;
       pointer-events: none;
       background: currentColor;
-      opacity: 0.28;
+      opacity: 0.22;
       transform: scale(0);
-      animation: rippleSpread 0.6s ease-out forwards;
+      animation: rippleSpread 0.55s ease-out forwards;
       z-index: 3;
     }
     @keyframes rippleSpread {
-      to { transform: scale(2.4); opacity: 0; }
+      to { transform: scale(2.2); opacity: 0; }
     }
 
-    /* N13 度量卡 3D 悬停倾斜 */
-    .gauge-card:hover {
-      transform: perspective(950px) rotateX(2.4deg) translateY(-3px) scale(1.012);
-    }
-
-    /* N14 被淘汰页面幽灵浮出消散 */
+    /* 被淘汰页面幽灵浮出消散 */
     .evict-ghost {
       position: absolute;
       left: 50%;
       top: 6px;
-      font-size: 13px;
+      font-size: 12.5px;
       font-weight: 800;
       font-family: var(--font-mono);
       color: var(--rose-main);
-      text-shadow: 0 0 10px rgba(244, 63, 94, 0.45);
       pointer-events: none;
       z-index: 6;
       white-space: nowrap;
-      animation: evictGhostFloat 1.1s ease-out forwards;
+      animation: evictGhostFloat 1.0s ease-out forwards;
     }
     @keyframes evictGhostFloat {
-      0% { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.8); }
-      22% { opacity: 1; }
-      100% { opacity: 0; transform: translateX(-50%) translateY(-34px) scale(1.15); }
-    }
-
-    /* N15 演示按钮箭头悬停推进 */
-    .btn-launch-demo:hover .arrow-nudge { animation: arrowNudge 0.75s infinite; }
-    @keyframes arrowNudge {
-      0%, 100% { transform: translateX(0); }
-      50% { transform: translateX(5px); }
+      0% { opacity: 0; transform: translateX(-50%) translateY(6px); }
+      25% { opacity: 1; }
+      100% { opacity: 0; transform: translateX(-50%) translateY(-28px); }
     }
 
     /* ==========================================================================
@@ -1821,13 +1224,6 @@
 <body>
 
   <!-- ==========================================================================
-       液态焦散多重折射氛围球 (Liquid Caustics Background)
-       ========================================================================== -->
-  <div class="ambient-orb ambient-orb-1" aria-hidden="true"></div>
-  <div class="ambient-orb ambient-orb-2" aria-hidden="true"></div>
-  <div class="ambient-orb ambient-orb-3" aria-hidden="true"></div>
-
-  <!-- ==========================================================================
        左侧悬浮式纯文字树状导航 (Floating Text Sidebar Dock)
        ========================================================================== -->
   <aside class="floating-sidebar">
@@ -1883,16 +1279,11 @@
        ========================================================================== -->
   <main class="app-main">
 
-    <!-- 顶部统一视口头与二级胶囊切换栏 -->
+    <!-- 顶部视口标题区 -->
     <div class="view-header-strip">
       <div class="view-title-wrap">
         <h1 id="topDisplayTitle">LRU (最近最少使用) 机制深度解构</h1>
         <p id="topDisplaySub">时间局部性模型、哈希表与双向循环链表常数级演进</p>
-      </div>
-
-      <div class="subtab-segmented-control" id="segmentedControl">
-        <button class="segmented-pill active" id="btnSubTab1">算法介绍</button>
-        <button class="segmented-pill" id="btnSubTab2">动画演示</button>
       </div>
     </div>
 
@@ -1908,26 +1299,22 @@
 
         <div class="article-grid-two">
           <div class="prose-column">
-            <p><strong>底层 O(1) 数据结构拓扑：</strong><br>
-            教科书上直观的线性查找在生产级系统中完全不可行。真实数据库采用 <strong>Page Table (Hash Map) + 双向循环链表 (Doubly Linked List)</strong> 支撑严格常数级操作：</p>
-            <ul style="padding-left: 20px; display:flex; flex-direction:column; gap:8px;">
-              <li><strong>读命中 (Cache Hit)</strong>：Hash 寻址节点后，在 O(1) 内解除前后双向指针，重新插入 MRU (Most Recently Used) 链表头部；</li>
-              <li><strong>缺页置换 (Miss & Evict)</strong>：当缓冲池槽位饱和时，直接弹出 LRU 尾部 Pin=0 的最冷节点，腾出槽位并在头部接入新页。</li>
+            <h3>底层 O(1) 数据结构拓扑</h3>
+            <p>教科书上的线性查找在生产级系统中完全不可行。真实数据库采用 <strong>Page Table (Hash Map) + 双向循环链表 (Doubly Linked List)</strong> 支撑严格常数级操作：</p>
+            <ul style="padding-left: 20px; display:flex; flex-direction:column; gap:10px;">
+              <li><strong>读命中 (Cache Hit)</strong>：Hash 寻址节点后，在 <code>O(1)</code> 内解除前后双向指针，重新插入 MRU (Most Recently Used) 链表头部；</li>
+              <li><strong>缺页置换 (Miss &amp; Evict)</strong>：当缓冲池槽位饱和时，直接弹出 LRU 尾部 <code>Pin=0</code> 的最冷节点，腾出槽位并在头部接入新页。</li>
             </ul>
-            <p><strong>致命病态反例：全表扫描缓存污染 (Cache Pollution)</strong><br>
-            当数据库执行批处理慢查询（如 <code>SELECT * FROM Big_Log</code>）时，大量仅读取一次的冷数据页涌入 MRU 头部，将真正高频的事务热点页驱逐出池，导致后续 OLTP 命中率直接暴跌为 0%！</p>
           </div>
 
           <div class="prose-column">
+            <h3>致命病态反例：全表扫描缓存污染</h3>
+            <p>当数据库执行批处理慢查询（如 <code>SELECT * FROM Big_Log</code>）时，大量仅读取一次的冷数据页涌入 MRU 头部，将真正高频的事务热点页驱逐出池，导致后续 OLTP 命中率直接暴跌为 0%。</p>
             <div class="callout-pill-box">
-              <strong>现代数据库内核的破局演进：MySQL InnoDB Midpoint LRU</strong><br>
-              为了攻克上述全表扫描污染，MySQL InnoDB 在 <code>buf0lru.cc</code> 中将 LRU 链表按 5:8 比例划分为 Young 区（热区，前 63%）与 Old 区（冷区，后 37%）。<br><br>
-              新载入页面仅插入 Old 区头部；且配合 <code>innodb_old_blocks_time=1000ms</code> 时间窗口，全表扫描在 1 秒内连续迭代多次的页面绝不晋升，扫描完毕自然从 Old 尾部移出，Young 区核心热点毫发无损！
+              <strong>现代数据库内核演进：MySQL InnoDB Midpoint LRU</strong><br>
+              为了攻克全表扫描污染，MySQL InnoDB 在 <code>buf0lru.cc</code> 中将 LRU 链表按 5:8 比例划分为 Young 区（热区，前 63%）与 Old 区（冷区，后 37%）。<br><br>
+              新载入页面仅插入 Old 区头部，配合 <code>innodb_old_blocks_time=1000ms</code> 时间窗口，全表扫描在 1 秒内连续迭代的页面绝不晋升，扫描完毕自然从 Old 尾部移出，Young 区热点毫发无损。
             </div>
-            <button class="btn-launch-demo" onclick="goToLruSim()">
-              <span>立即进入 LRU 交互动画演练</span>
-              <span class="arrow-nudge">→</span>
-            </button>
           </div>
         </div>
       </div>
@@ -1945,8 +1332,6 @@
           <button class="btn-pill-subtle" id="btnLruStepNext">下一步</button>
           <button class="btn-pill-subtle" id="btnLruReset">重置</button>
           <span class="step-badge" id="stepBadgeLru">STEP 0 / 8</span>
-        </div>
-        <div class="sim-btn-group">
           <button class="btn-pill-subtle" onclick="triggerPreset('POLLUTION')">注入全表扫描反例</button>
         </div>
         <div class="speed-control-group">
@@ -1959,14 +1344,14 @@
           </div>
         </div>
         <div class="sim-input-box">
-          <input type="text" id="inputLruStream" value="P1, P2, P3, P4, P1, P2, P5, P1">
+          <input type="text" id="inputLruStream" value="P1, P2, P3, P4, P1, P2, P5, P1" aria-label="自定义页面请求序列">
           <button class="btn-pill-subtle" id="btnLoadLruStream">载入</button>
         </div>
       </div>
 
       <!-- 请求传送带 -->
       <div class="conveyor-box">
-        <div style="font-size: 12px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">页面引用流水线 (Page Reference Stream)</div>
+        <div style="font-size: 12px; font-weight:700; color:var(--text-muted);">页面引用流水线 (Page Reference Stream)</div>
         <div class="conveyor-track" id="trackLru"></div>
       </div>
 
@@ -1979,17 +1364,18 @@
           </div>
           <div class="rate-pill-display">
             <span class="status-chip idle" id="statusChipLru" title="当前请求在本引擎的判定结果">IDLE</span>
+            <span class="rate-label-text">命中率</span>
             <span class="val" id="valRateLru" style="color:var(--blue-main);">0%</span>
           </div>
         </div>
 
         <div>
-          <div style="font-size: 12px; font-weight:700; color:var(--text-muted); margin-bottom:8px;">物理内存槽位 (BUFFER FRAMES)</div>
+          <div style="font-size: 12px; font-weight:700; color:var(--text-muted); margin-bottom:8px;">物理内存槽位 (Buffer Frames)</div>
           <div class="slot-grid" id="slotsLru"></div>
         </div>
 
         <div>
-          <div style="font-size: 12px; font-weight:700; color:var(--text-muted); margin-bottom:8px;">内核双向循环链表 (DOUBLY LINKED LIST)</div>
+          <div style="font-size: 12px; font-weight:700; color:var(--text-muted); margin-bottom:8px;">内核双向循环链表 (Doubly Linked List)</div>
           <div class="flow-rail" id="railLruList"></div>
         </div>
       </div>
@@ -2007,27 +1393,23 @@
 
         <div class="article-grid-two">
           <div class="prose-column">
-            <p><strong>打破最小堆 O(log N) 性能桎梏：</strong><br>
-            很多教材常误用最小堆维护频次，但每次命中后的堆重构开销为 O(log N)，在千万级缓冲池中无法承受。工业级系统采用 <strong>Ketan Shah et al. O(1) LFU 算法</strong>：</p>
-            <ul style="padding-left: 20px; display:flex; flex-direction:column; gap:8px;">
-              <li><strong>多级双向频次桶 (Frequency Buckets)</strong>：每个频次作为一个 Bucket 节点，所有 Bucket 组成双向链表；</li>
-              <li><strong>桶内双向链表与 min_freq 指针</strong>：每个桶内挂载该频次的所有页面；由 <code>min_freq</code> 指针实时定位非空的最低频次桶；</li>
-              <li><strong>同频仲裁 (Tie-breaking Rule)</strong>：最低桶内存在多个同频候选页时，严格按进入桶的时间先后顺序 (FIFO) 淘汰尾部最老节点。</li>
+            <h3>打破最小堆 O(log N) 性能桎梏</h3>
+            <p>许多教材使用最小堆维护频次，但每次命中后的堆重构开销为 <code>O(log N)</code>，在千万级缓冲池中无法承受。工业级系统采用 <strong>Ketan Shah et al. O(1) LFU 算法</strong>：</p>
+            <ul style="padding-left: 20px; display:flex; flex-direction:column; gap:10px;">
+              <li><strong>多级双向频次桶</strong>：每个频次作为一个 Bucket 节点，所有 Bucket 组成双向链表；</li>
+              <li><strong>桶内链表与 min_freq 指针</strong>：每个桶挂载该频次的所有页面，由 <code>min_freq</code> 实时定位非空的最低频次桶；</li>
+              <li><strong>同频仲裁 (FIFO)</strong>：最低桶内存在多个同频候选页时，按进入桶的时间先后顺序淘汰尾部最老节点。</li>
             </ul>
-            <p><strong>致命病态反例：历史频次僵死 (Cache Sclerosis)</strong><br>
-            若某页面在早期批处理中被集中访问 1000 次，随后再也不被使用。由于缺乏时间衰减，该废弃页面将凭虚高频次永久霸占内存槽位，导致新活跃页面频遭饥饿淘汰！</p>
           </div>
 
           <div class="prose-column">
+            <h3>致命病态反例：历史频次僵死</h3>
+            <p>若某页面在早期批处理中被集中访问 1000 次，随后再也不被使用。由于缺乏时间衰减，该废弃页面将凭虚高频次永久霸占内存槽位，导致新活跃页面频遭饥饿淘汰。</p>
             <div class="callout-pill-box emerald">
-              <strong>现代数据库内核的破局演进：PostgreSQL Clock-Sweep 与 W-TinyLFU</strong><br>
-              <strong>PostgreSQL</strong> 在 <code>freelist.c</code> 中采用时钟置换：给每个缓冲帧维护 0~5 的原子 <code>usage_count</code>，时钟指针循环扫描时自减 1，既避免了双链表全局排他锁，又在常数开销下优雅融合了频次累积与时间老化！<br><br>
+              <strong>现代数据库内核演进：PostgreSQL Clock-Sweep 与 W-TinyLFU</strong><br>
+              <strong>PostgreSQL</strong> 在 <code>freelist.c</code> 中采用时钟置换：为每个缓冲帧维护 0~5 的原子 <code>usage_count</code>，时钟指针循环扫描时自减 1，在常数开销下优雅融合了频次累积与时间老化。<br><br>
               <strong>W-TinyLFU</strong> 则引入采样门限机制：当全局采样达到阈值时，对所有计数器执行整体减半（Halving Reset），彻底清除僵死历史。
             </div>
-            <button class="btn-launch-demo" style="background:linear-gradient(135deg, var(--emerald-main), #047857);" onclick="goToLfuSim()">
-              <span>立即进入 LFU 交互动画演练</span>
-              <span class="arrow-nudge">→</span>
-            </button>
           </div>
         </div>
       </div>
@@ -2040,13 +1422,11 @@
       <!-- 统一播放控制栏 -->
       <div class="sim-action-bar">
         <div class="sim-btn-group">
-          <button class="btn-pill-action" style="background:linear-gradient(135deg, var(--emerald-main), #047857);" id="btnLfuPlay" title="开始 / 暂停 / 继续演示">开始演示</button>
+          <button class="btn-pill-action" style="background:var(--emerald-main); box-shadow: 0 3px 10px var(--emerald-glow);" id="btnLfuPlay" title="开始 / 暂停 / 继续演示">开始演示</button>
           <button class="btn-pill-subtle" id="btnLfuStepPrev">上一步</button>
           <button class="btn-pill-subtle" id="btnLfuStepNext">下一步</button>
           <button class="btn-pill-subtle" id="btnLfuReset">重置</button>
           <span class="step-badge" id="stepBadgeLfu">STEP 0 / 8</span>
-        </div>
-        <div class="sim-btn-group">
           <button class="btn-pill-subtle" onclick="triggerPreset('SCLEROSIS')">注入频次僵死反例</button>
         </div>
         <div class="speed-control-group">
@@ -2059,14 +1439,14 @@
           </div>
         </div>
         <div class="sim-input-box">
-          <input type="text" id="inputLfuStream" value="P1, P2, P3, P4, P1, P2, P5, P1">
+          <input type="text" id="inputLfuStream" value="P1, P2, P3, P4, P1, P2, P5, P1" aria-label="自定义页面请求序列">
           <button class="btn-pill-subtle" id="btnLoadLfuStream">载入</button>
         </div>
       </div>
 
       <!-- 请求传送带 -->
       <div class="conveyor-box">
-        <div style="font-size: 12px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">页面引用流水线 (Page Reference Stream)</div>
+        <div style="font-size: 12px; font-weight:700; color:var(--text-muted);">页面引用流水线 (Page Reference Stream)</div>
         <div class="conveyor-track" id="trackLfu"></div>
       </div>
 
@@ -2079,17 +1459,18 @@
           </div>
           <div class="rate-pill-display">
             <span class="status-chip idle" id="statusChipLfu" title="当前请求在本引擎的判定结果">IDLE</span>
+            <span class="rate-label-text">命中率</span>
             <span class="val" id="valRateLfu" style="color:var(--emerald-main);">0%</span>
           </div>
         </div>
 
         <div>
-          <div style="font-size: 12px; font-weight:700; color:var(--text-muted); margin-bottom:8px;">物理内存槽位 (带访问频次 FREQ)</div>
+          <div style="font-size: 12px; font-weight:700; color:var(--text-muted); margin-bottom:8px;">物理内存槽位 (带访问频次 Freq)</div>
           <div class="slot-grid" id="slotsLfu"></div>
         </div>
 
         <div>
-          <div style="font-size: 12px; font-weight:700; color:var(--text-muted); margin-bottom:8px;">多级 O(1) 频次桶 (FREQUENCY BUCKETS)</div>
+          <div style="font-size: 12px; font-weight:700; color:var(--text-muted); margin-bottom:8px;">多级 O(1) 频次桶 (Frequency Buckets)</div>
           <div class="bucket-stack" id="stackLfuBuckets"></div>
         </div>
       </div>
@@ -2117,14 +1498,14 @@
           </div>
         </div>
         <div class="sim-input-box">
-          <input type="text" id="inputArenaStream" value="P1, P2, P3, P4, P1, P2, P5, P1, P6, S1, S2, P1">
+          <input type="text" id="inputArenaStream" value="P1, P2, P3, P4, P1, P2, P5, P1, P6, S1, S2, P2" aria-label="同屏竞技请求序列">
           <button class="btn-pill-subtle" id="btnLoadArenaStream">同步运行</button>
         </div>
       </div>
 
       <!-- 传送带 -->
       <div class="conveyor-box">
-        <div style="font-size: 12px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">共享页面引用流水线 (Shared Stream)</div>
+        <div style="font-size: 12px; font-weight:700; color:var(--text-muted);">共享页面引用流水线 (Shared Stream)</div>
         <div class="conveyor-track" id="trackArena"></div>
       </div>
 
@@ -2177,18 +1558,18 @@
 
       <!-- 实时累计命中率对决条 -->
       <div class="gauge-card">
-        <div style="font-size: 15px; font-weight:700; color:var(--text-main);">实时累计命中率直观对比 (Cumulative Hit Rate)</div>
+        <div style="font-size: 14.5px; font-weight:700; color:var(--text-main);">实时累计命中率对比 (Cumulative Hit Rate)</div>
         <div class="bar-line">
-          <span class="bar-line-name" style="color:var(--blue-main)">LRU:</span>
+          <span class="bar-line-name" style="color:var(--blue-main)">LRU</span>
           <div class="bar-line-track">
-            <div class="bar-line-fill lru" id="barFillLru" style="width:0%">0%</div>
+            <div class="bar-line-fill lru" id="barFillLru" style="width:0%"></div>
           </div>
           <span class="bar-line-num" id="barNumLru" style="color:var(--blue-main)">0%</span>
         </div>
         <div class="bar-line">
-          <span class="bar-line-name" style="color:var(--emerald-main)">LFU:</span>
+          <span class="bar-line-name" style="color:var(--emerald-main)">LFU</span>
           <div class="bar-line-track">
-            <div class="bar-line-fill lfu" id="barFillLfu" style="width:0%">0%</div>
+            <div class="bar-line-fill lfu" id="barFillLfu" style="width:0%"></div>
           </div>
           <span class="bar-line-num" id="barNumLfu" style="color:var(--emerald-main)">0%</span>
         </div>
@@ -2205,50 +1586,50 @@
           <p>从时间复杂度、多核并发锁冲突、抗扫描冲击与适应工作集漂移等多维度评估。</p>
         </div>
 
-        <div style="overflow-x:auto;">
-          <table style="width:100%; border-collapse:collapse; font-size: 15px; text-align:left;">
+        <div>
+          <table style="width:100%; border-collapse:collapse; font-size: 14.5px; text-align:left;">
             <thead>
-              <tr style="border-bottom:2px solid var(--glass-border-subtle); color:var(--text-muted);">
-                <th style="padding:12px 14px;">置换策略</th>
-                <th style="padding:12px 14px;">时间复杂度</th>
-                <th style="padding:12px 14px;">并发锁争用</th>
-                <th style="padding:12px 14px;">抗全表扫描</th>
-                <th style="padding:12px 14px;">抗频次僵死</th>
-                <th style="padding:12px 14px;">工业界代表实现</th>
+              <tr style="border-bottom:2px solid var(--glass-border); color:var(--text-muted);">
+                <th>置换策略</th>
+                <th>时间复杂度</th>
+                <th>并发锁争用</th>
+                <th>抗全表扫描</th>
+                <th>抗频次僵死</th>
+                <th>工业界代表实现</th>
               </tr>
             </thead>
             <tbody>
               <tr style="border-bottom:1px solid var(--glass-border-subtle);">
-                <td style="padding:13px 14px; font-weight:700; color:var(--blue-main);">原生 LRU</td>
-                <td style="padding:13px 14px; font-family:var(--font-mono);">O(1)</td>
-                <td style="padding:13px 14px; color:var(--rose-main);">极高 (读命中改双链)</td>
-                <td style="padding:13px 14px; color:var(--rose-main);">极弱 (0% 穿透)</td>
-                <td style="padding:13px 14px; color:var(--emerald-main);">极强 (自然时间衰减)</td>
-                <td style="padding:13px 14px;">传统教学引擎、简单缓存</td>
+                <td style="font-weight:700; color:var(--blue-main); white-space:nowrap;">原生 LRU</td>
+                <td style="font-family:var(--font-mono); white-space:nowrap;">O(1)</td>
+                <td style="color:var(--rose-main);">极高 (读命中改双链)</td>
+                <td style="color:var(--rose-main);">极弱 (0% 穿透)</td>
+                <td style="color:var(--emerald-main);">极强 (自然时间衰减)</td>
+                <td>传统教学引擎、简单缓存</td>
               </tr>
               <tr style="border-bottom:1px solid var(--glass-border-subtle);">
-                <td style="padding:13px 14px; font-weight:700; color:var(--emerald-main);">原生 O(1) LFU</td>
-                <td style="padding:13px 14px; font-family:var(--font-mono);">O(1)</td>
-                <td style="padding:13px 14px; color:var(--rose-main);">高 (跨桶指针调整)</td>
-                <td style="padding:13px 14px; color:var(--emerald-main);">极强 (频次壁垒隔离)</td>
-                <td style="padding:13px 14px; color:var(--rose-main);">极弱 (历史幽灵不走)</td>
-                <td style="padding:13px 14px;">学术纯粹实现</td>
+                <td style="font-weight:700; color:var(--emerald-main); white-space:nowrap;">原生 O(1) LFU</td>
+                <td style="font-family:var(--font-mono); white-space:nowrap;">O(1)</td>
+                <td style="color:var(--rose-main);">高 (跨桶指针调整)</td>
+                <td style="color:var(--emerald-main);">极强 (频次壁垒隔离)</td>
+                <td style="color:var(--rose-main);">极弱 (历史幽灵不走)</td>
+                <td>学术纯粹实现</td>
               </tr>
               <tr style="border-bottom:1px solid var(--glass-border-subtle);">
-                <td style="padding:13px 14px; font-weight:700;">PostgreSQL Clock</td>
-                <td style="padding:13px 14px; font-family:var(--font-mono);">O(1)</td>
-                <td style="padding:13px 14px; color:var(--emerald-main);">极低 (读原子自增)</td>
-                <td style="padding:13px 14px; color:var(--amber-main);">中等 (受限缓冲圈)</td>
-                <td style="padding:13px 14px; color:var(--emerald-main);">良好 (时钟循环自衰减)</td>
-                <td style="padding:13px 14px;">PostgreSQL, SQLite</td>
+                <td style="font-weight:700; white-space:nowrap;">PostgreSQL Clock</td>
+                <td style="font-family:var(--font-mono); white-space:nowrap;">O(1)</td>
+                <td style="color:var(--emerald-main);">极低 (读原子自增)</td>
+                <td style="color:var(--amber-main);">中等 (受限缓冲圈)</td>
+                <td style="color:var(--emerald-main);">良好 (时钟循环自衰减)</td>
+                <td>PostgreSQL, SQLite</td>
               </tr>
               <tr>
-                <td style="padding:13px 14px; font-weight:700;">InnoDB Midpoint</td>
-                <td style="padding:13px 14px; font-family:var(--font-mono);">O(1)</td>
-                <td style="padding:13px 14px; color:var(--amber-main);">中等 (分段互斥)</td>
-                <td style="padding:13px 14px; color:var(--emerald-main);">极强 (1000ms 隔离)</td>
-                <td style="padding:13px 14px; color:var(--emerald-main);">极强 (Young/Old 代际隔离)</td>
-                <td style="padding:13px 14px;">MySQL InnoDB 引擎</td>
+                <td style="font-weight:700; white-space:nowrap;">InnoDB Midpoint</td>
+                <td style="font-family:var(--font-mono); white-space:nowrap;">O(1)</td>
+                <td style="color:var(--amber-main);">中等 (分段互斥)</td>
+                <td style="color:var(--emerald-main);">极强 (1000ms 隔离)</td>
+                <td style="color:var(--emerald-main);">极强 (Young/Old 代际隔离)</td>
+                <td>MySQL InnoDB 引擎</td>
               </tr>
             </tbody>
           </table>
@@ -2398,10 +1779,10 @@
       },
       compare: {
         title: "LRU 与 LFU 深度对比竞技场",
-        sub: "同屏毫秒级联动推演、累计命中率赛跑与工业级评估矩阵",
+        sub: "同屏毫秒级联动推演与累计命中率实时对决",
         subtabs: [
-          { id: 'arena', label: '同屏竞技', panelId: 'panelCompareArena' },
-          { id: 'matrix', label: '理论评估', panelId: 'panelCompareMatrix' }
+          { id: 'arena', label: '同屏竞技', panelId: 'panelCompareArena', title: "LRU 与 LFU 同屏竞技场", sub: "同屏毫秒级联动推演与累计命中率实时对决" },
+          { id: 'matrix', label: '理论评估', panelId: 'panelCompareMatrix', title: "LRU 与 LFU 综合性能评估矩阵", sub: "从时间复杂度、并发锁争用、抗扫描冲击与工程选型多维度对比" }
         ]
       }
     };
@@ -2420,31 +1801,39 @@
       document.getElementById('linkCompareArena').classList.toggle('active-sub', navState.module === 'compare' && navState.subtab === 'arena');
       document.getElementById('linkCompareMatrix').classList.toggle('active-sub', navState.module === 'compare' && navState.subtab === 'matrix');
 
-      // 3. 更新顶部标题与副标题
+      // 3. 更新顶部标题与副标题（支持子页签独立标题）
       const cfg = modulesConfig[navState.module];
-      document.getElementById('topDisplayTitle').innerText = cfg.title;
-      document.getElementById('topDisplaySub').innerText = cfg.sub;
-
-      // 4. 更新顶部二级胶囊按键标签
-      const btn1 = document.getElementById('btnSubTab1');
-      const btn2 = document.getElementById('btnSubTab2');
-      btn1.innerText = cfg.subtabs[0].label;
-      btn2.innerText = cfg.subtabs[1].label;
-      btn1.classList.toggle('active', navState.subtab === cfg.subtabs[0].id);
-      btn2.classList.toggle('active', navState.subtab === cfg.subtabs[1].id);
-
-      // 5. 切换内容容器显示
-      document.querySelectorAll('.tab-content-panel').forEach(p => p.classList.remove('active-panel'));
       const activeSubtabObj = cfg.subtabs.find(s => s.id === navState.subtab) || cfg.subtabs[0];
+      document.getElementById('topDisplayTitle').innerText = activeSubtabObj.title || cfg.title;
+      document.getElementById('topDisplaySub').innerText = activeSubtabObj.sub || cfg.sub;
+
+      // 4. 切换内容容器显示
+      document.querySelectorAll('.tab-content-panel').forEach(p => p.classList.remove('active-panel'));
       const targetPanel = document.getElementById(activeSubtabObj.panelId);
       if (targetPanel) targetPanel.classList.add('active-panel');
 
       renderAllSimulators();
     }
 
-    function setRoute(module, subtab) {
+    function parseStreamInput(id) {
+      const el = document.getElementById(id);
+      if (!el) return null;
+      const parts = el.value.split(/[,，\s]+/).map(s => s.trim()).filter(s => s.length > 0);
+      return parts.length > 0 ? parts : null;
+    }
+
+    function setRoute(module, subtab, keepStream = false) {
       navState.module = module;
       navState.subtab = subtab || modulesConfig[module].subtabs[0].id;
+      if (!keepStream) {
+        if (module === 'compare' && navState.subtab === 'arena') {
+          stream = parseStreamInput('inputArenaStream') || ["P1", "P2", "P3", "P4", "P1", "P2", "P5", "P1", "P6", "S1", "S2", "P2"];
+        } else if (module === 'lru' && navState.subtab === 'sim') {
+          stream = parseStreamInput('inputLruStream') || ["P1", "P2", "P3", "P4", "P1", "P2", "P5", "P1"];
+        } else if (module === 'lfu' && navState.subtab === 'sim') {
+          stream = parseStreamInput('inputLfuStream') || ["P1", "P2", "P3", "P4", "P1", "P2", "P5", "P1"];
+        }
+      }
       // 演示要求：任意导航跳转后动画复位至初始状态，等待点击"开始演示"
       pause();
       resetSim();
@@ -2463,16 +1852,6 @@
     document.getElementById('navGroupCompare').addEventListener('click', () => setRoute('compare', 'arena'));
     document.getElementById('linkCompareArena').addEventListener('click', () => setRoute('compare', 'arena'));
     document.getElementById('linkCompareMatrix').addEventListener('click', () => setRoute('compare', 'matrix'));
-
-    // 事件绑定：顶部胶囊切换
-    document.getElementById('btnSubTab1').addEventListener('click', () => {
-      const cfg = modulesConfig[navState.module];
-      setRoute(navState.module, cfg.subtabs[0].id);
-    });
-    document.getElementById('btnSubTab2').addEventListener('click', () => {
-      const cfg = modulesConfig[navState.module];
-      setRoute(navState.module, cfg.subtabs[1].id);
-    });
 
     function goToLruSim() { setRoute('lru', 'sim'); }
     function goToLfuSim() { setRoute('lfu', 'sim'); }
@@ -2712,10 +2091,20 @@
       setRateValue('valRateArenaLru', `${rLru}%`);
       setRateValue('valRateArenaLfu', `${rLfu}%`);
 
+      const elStatArenaLru = document.getElementById('statusChipArenaLru');
+      if (elStatArenaLru) {
+        elStatArenaLru.className = `status-chip anim-pop ${lru.status.toLowerCase()}`;
+        elStatArenaLru.innerText = lru.status;
+      }
+      const elStatArenaLfu = document.getElementById('statusChipArenaLfu');
+      if (elStatArenaLfu) {
+        elStatArenaLfu.className = `status-chip anim-pop ${lfu.status.toLowerCase()}`;
+        elStatArenaLfu.innerText = lfu.status;
+      }
+
       const barFillLru = document.getElementById('barFillLru');
       if (barFillLru) {
         barFillLru.style.width = `${rLru}%`;
-        barFillLru.innerText = `${rLru}%`;
       }
       const barNumLru = document.getElementById('barNumLru');
       if (barNumLru) barNumLru.innerText = `${rLru}%`;
@@ -2723,7 +2112,6 @@
       const barFillLfu = document.getElementById('barFillLfu');
       if (barFillLfu) {
         barFillLfu.style.width = `${rLfu}%`;
-        barFillLfu.innerText = `${rLfu}%`;
       }
       const barNumLfu = document.getElementById('barNumLfu');
       if (barNumLfu) barNumLfu.innerText = `${rLfu}%`;
@@ -2828,10 +2216,10 @@
     function triggerPreset(type) {
       if (type === 'POLLUTION') {
         stream = ["Hot1", "Hot2", "Hot3", "Hot1", "Scan1", "Scan2", "Scan3", "Scan4", "Hot1", "Hot2"];
-        setRoute('lru', 'sim');
+        setRoute('lru', 'sim', true);
       } else if (type === 'SCLEROSIS') {
         stream = ["Ghost", "Ghost", "Ghost", "Ghost", "W1", "W2", "W3", "W4", "W1", "W2"];
-        setRoute('lfu', 'sim');
+        setRoute('lfu', 'sim', true);
       }
       const inputLru = document.getElementById('inputLruStream');
       if (inputLru) inputLru.value = stream.join(', ');
