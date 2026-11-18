@@ -164,7 +164,7 @@ def render_video():
         draw.rectangle([(0, 0), (width, 80)], fill=(22, 31, 51))
         draw.line([(0, 80), (width, 80)], fill=BORDER_COLOR, width=2)
         draw.text((40, 20), "高级数据库系统 · 缓冲区页面置换机制深度剖析", font=font_title, fill=TEXT_MAIN)
-        draw.text((820, 26), "LRU vs LFU 内核仿真与反例对决 (1080P 60FPS)", font=font_sub, fill=BLUE)
+        draw.text((820, 26), "LRU vs LFU 内核仿真与反例对决 (1080P 30FPS)", font=font_sub, fill=BLUE)
 
         # 时间与步数胶囊
         draw.rounded_rectangle([(1600, 18), (1880, 62)], radius=12, fill=(15, 23, 42), outline=BORDER_COLOR, width=1)
@@ -353,6 +353,7 @@ def render_video():
     e_draw.text((480, 300), "演示完毕 · 汇报总结", font=font_huge, fill=GREEN)
     e_draw.text((340, 400), "LRU 擅长敏捷遗忘但怕扫描；LFU 擅长守卫热点但怕僵死", font=font_section, fill=TEXT_MAIN)
     e_draw.text((380, 460), "工业界最佳实践：MySQL Midpoint 5:8 隔离 与 PG Clock-Sweep 衰减", font=font_section, fill=AMBER)
+    e_draw.text((330, 520), "交互演示版：演示文稿/index.html（开始/暂停/继续三态 · 请求流点击跳转 · 双反例一键注入）", font=font_body, fill=TEXT_MUTED)
     e_draw.text((580, 620), "谢谢各位评委老师！欢迎提问指导", font=font_huge, fill=BLUE)
     end_frame = cv2.cvtColor(np.array(end_img), cv2.COLOR_RGB2BGR)
     for _ in range(90):

@@ -92,7 +92,7 @@ db-hw/
 └── README.md                      # 本文档
 ```
 
-> **注意**：`mp4` 视频与 `pptx` 幻灯片录制/生成自早期版本页面（当时含解说横幅与自动播放）。**最新演示行为以网页版为准**；如需按当前版本重新生成，在 `演示文稿` 目录分别执行 `python generate_video.py` 与 `python generate_pptx.py`（需先 `pip install opencv-python pillow python-pptx`）。
+> `mp4`（1080P 30FPS，33 秒浓缩五大阶段）与 `pptx`（16 页含全套演讲备注）已于 2026-11-18 与最终版页面**同步重新生成**。如需再次生成：在 `演示文稿` 目录执行 `python generate_video.py` 与 `python generate_pptx.py`（依赖 `opencv-python pillow python-pptx`）。
 
 ---
 
