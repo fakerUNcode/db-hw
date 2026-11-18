@@ -1,0 +1,11 @@
+# 统一换行符策略，保证脚本跨平台可用
+*.sh  text eol=lf
+*.bat text eol=crlf
+*.py  text eol=lf
+*.md  text eol=lf
+*.html text eol=lf
+
+# 二进制文件
+*.mp4  binary
+*.pptx binary
+*.jpg  binary
