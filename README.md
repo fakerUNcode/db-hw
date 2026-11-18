@@ -73,11 +73,7 @@ db-hw/
 ├── 演示文稿/
 │   ├── index.html                 # ★ 交互式动画系统（唯一核心交付，零依赖单文件）
 │   ├── start-windows.bat          # ★ Windows 一键运行脚本
-│   ├── start-mac-linux.sh         # ★ macOS / Linux 一键运行脚本
-│   ├── lru_lfu_comparison.pptx    # 学术汇报幻灯片（16:9，16 页，带演讲备注）
-│   ├── lru_lfu_animation.mp4      # 1080P 演示视频（1920x1080 30FPS）
-│   ├── generate_pptx.py           # 幻灯片自动化构建脚本（python-pptx）
-│   └── generate_video.py          # 视频自动化渲染脚本（OpenCV + Pillow）
+│   └── start-mac-linux.sh         # ★ macOS / Linux 一键运行脚本
 ├── 说明书/
 │   ├── 动画制作与讲解说明书.md      # 综合主说明书：理论建模、算法解构、设计实现
 │   ├── 5分钟现场逐字讲解稿.md      # 演讲词：对齐 5 分钟时间轴与翻页动作
@@ -91,8 +87,6 @@ db-hw/
 ├── .gitignore
 └── README.md                      # 本文档
 ```
-
-> `mp4`（1080P 30FPS，33 秒浓缩五大阶段）与 `pptx`（16 页含全套演讲备注）已于 2026-11-18 与最终版页面**同步重新生成**。如需再次生成：在 `演示文稿` 目录执行 `python generate_video.py` 与 `python generate_pptx.py`（依赖 `opencv-python pillow python-pptx`）。
 
 ---
 
